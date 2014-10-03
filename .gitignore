@@ -1,3 +1,5 @@
 .DS_Store
-*.pyc 
+*.pyc
+*.pyo
 __pycache__
+.idea
