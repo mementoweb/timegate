@@ -1,0 +1,1 @@
+uwsgi --http :9000 --wsgi-file application/wsgi.py --master
