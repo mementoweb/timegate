@@ -1,5 +1,7 @@
 __author__ = 'Yorick Chollet'
 
+import re
+
 #TODO move to constants
 
 HTTP_STATUS = {
@@ -13,3 +15,6 @@ URI_PARTS = {
     'G': 'timegate',
     'T': 'timemap'
 }
+
+HTTPRE = re.compile('https?://', re.IGNORECASE)
+WWWRE = re.compile('www.', re.IGNORECASE)
