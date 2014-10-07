@@ -4,6 +4,7 @@ import time
 from application import application as serv
 from conf.constants import URI_PARTS as URI
 
+from test.apistub import application as apistub
 
 __author__ = 'Yorick Chollet'
 
@@ -12,6 +13,7 @@ import unittest  # Python unit test structure
 from webtest import TestApp  # WSGI application tester
 
 server = TestApp(serv)
+api = TestApp(apistub)
 
 
 class TestServerSequence(unittest.TestCase):
@@ -63,7 +65,20 @@ class TestServerSequence(unittest.TestCase):
         url = """/timegatewww.wrong.url"""
         response = server.get(url, headers=ad, status=404)
 
+class TestServerHandlerSeq(unittest.TestCase):
+
+    def test_stub_up(self):
+        response = api.get('/test/', status=404)
+        assert len(response.normal_body) > 1
+
+    def test_flow(self):
+        timestr = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())
+        ad = {'Accept-Datetime': timestr}
+        response = server.get('/timegate/example.com/', headers=ad, status=200)
+
+
 def suite():
     st = unittest.TestSuite()
-    st.addTest(unittest.makeSuite(TestServerSequence))
+    # st.addTest(unittest.makeSuite(TestServerSequence))
+    st.addTest(unittest.makeSuite(TestServerHandlerSeq))
     return st
