@@ -11,8 +11,13 @@ from errors.handlererror import HandlerError
 
 class ExampleHandler(Handler):
 
+
     def __init__(self):
+        self.resourcebase = ['http://www.example.com/*',
+                             'http://www.an*.ontherwebite.com/' ]
         self.api_uri = 'http://127.0.0.1:9001/timemap/'
+
+
 
     def get(self, uri, datetime=None):
 

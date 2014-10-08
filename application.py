@@ -14,10 +14,37 @@ from errors.handlererror import HandlerError
 from core.timegate import Timegate
 from core.timemap import Timemap
 import time
+import glob
+import inspect
+import re
 
 __author__ = 'Yorick Chollet'
 
 debug = False
+
+
+# Builds the mapper from URI regular expression to handler class
+mapper = []
+extpath = 'core/extensions/'
+# Finds every python files in the extensions folder and imports it
+filelist = glob.glob(extpath+"*.py")
+for fn in filelist:
+    basen = fn[len(extpath):-3]
+    modulepath = extpath.replace('/', '.')+basen
+    module = importlib.import_module(modulepath)
+    # Finds all python classnames within the file
+    modulemembers = inspect.getmembers(module, inspect.isclass)
+    for mem in modulemembers:
+        # If the class was not imported, extract the classname
+        if str(mem[1]) == (modulepath + '.' + mem[0]):
+            classname = mem[0]
+            # Get the python class object from the classname and module
+            handlername = getattr(module, classname)
+            # Extract all URI regular expressions that the handlers manages
+            handler = handlername()
+            for regex in handler.resourcebase:
+                # Compiles the regex and maps it to the handler python class
+                mapper.append((re.compile(regex), handlername))
 
 
 def application(env, start_response):

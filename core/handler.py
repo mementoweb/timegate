@@ -10,6 +10,7 @@ from conf.constants import PROXIES
 class Handler:
 
     api_uri = None
+    resourcebase = None
 
     def __init__(self):
         pass
