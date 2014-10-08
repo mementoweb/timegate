@@ -28,9 +28,9 @@ class Handler:
     # def getmemento(self, uri_r, datetime):
     #     raise NotImplementedError
 
-    def request(self, resource, host):
+    def request(self, host, resource):
         try:
-            req = requests.get(host+'/'+resource)
+            req = requests.get(host+resource)
             return req
         except Exception as e:
             raise HandlerError("Cannot request version server (%s): %s" % (host + resource, e.message))

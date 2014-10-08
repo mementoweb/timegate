@@ -72,6 +72,7 @@ class TestServerHandlerSeq(unittest.TestCase):
         assert len(response.normal_body) > 1
 
     def test_flow(self):
+        api = TestApp(apistub)
         timestr = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())
         ad = {'Accept-Datetime': timestr}
         response = server.get('/timegate/example.com/', headers=ad, status=200)
