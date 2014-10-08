@@ -23,6 +23,8 @@ __author__ = 'Yorick Chollet'
 debug = False
 
 
+
+# TODO define if trycatch needed for badly-implemented handlers
 # Builds the mapper from URI regular expression to handler class
 mapper = []
 extpath = 'core/extensions/'
@@ -78,12 +80,12 @@ def application(env, start_response):
             accept_datetime = dateparse(req_datetime)
             uri_r = uriparse(req_path, req_type)
             handler = loadhandler(uri_r)
-            timemap = handler.get(uri_r.geturl(), accept_datetime)
+            timemap = handler.get(uri_r, accept_datetime)
             responsetuple = processresponse(timemap)
             if responsetuple[0]:
                 original = responsetuple[0]
             else:
-                original = uri_r.geturl().encode('utf8')
+                original = uri_r.encode('utf8')
             memento = best(responsetuple[1], accept_datetime)
             return found_response(memento, original, start_response)
         except TimegateError as e:
@@ -141,7 +143,7 @@ def uriparse(pathstr, typestr):
     except Exception as e:
         raise URIRequestError("Error: Cannot parse path: %s" % e.message)
 
-    return parsed
+    return parsed.geturl()
 
 
 def error_response(status, message, start_response, headers):
@@ -190,14 +192,13 @@ def loadhandler(uri):
     :return:
     """
 
-    #TODO modularizer ca...
-    if uri.netloc == 'www.example.com':
-        module = importlib.import_module('core.extensions.example')
-        hanclerclss = getattr(module, 'ExampleHandler')
-        handler = hanclerclss()
-        return handler
-    else:
-        raise URIRequestError('Cannot find any handler for %s' % uri.geturl(), 404)
+    #TODO define if FIRST/ALL...
+    for rule in mapper:
+        (regex, handler) = rule
+        if bool(regex.match(uri)):
+            return handler()
+
+    raise URIRequestError('Cannot find any handler for %s' % uri, 404)
 
 
 def closest(timemap, accept_datetime):

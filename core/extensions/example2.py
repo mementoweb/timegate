@@ -9,13 +9,17 @@ from errors.handlererror import HandlerError
 #Handlers
 
 
-class ExampleHandler(Handler):
+class OtherHandler(Handler):
 
 
     def __init__(self):
-        self.resourcebase = ['http://www.example.com/*',
-                             'http://www.an*.ontherwebite.com/' ]
-        self.api_uri = 'http://127.0.0.1:9001/timemap/'
+
+        # Regular Expressions! must begin with http:// or https://
+        self.resourcebase = ['http://www.an\d{1,2}.other.com/*',
+                             'http://www.another.com/*'
+                             ]
+
+        self.api_uri = 'http://127.0.0.1:9001/timemap2/'
 
 
 
