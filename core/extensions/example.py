@@ -21,7 +21,6 @@ class ExampleHandler(Handler):
 
         # Handles API Response
         if not req or req.status_code == 404:
-            print req
             raise HandlerError("Cannot find resource on version server.", 404)
         elif req.status_code == 200:
             # Assume the API handles the requests correctly
@@ -38,9 +37,8 @@ class ExampleHandler(Handler):
             tuplelist = map(keys2tuple, dict_list)
 
             # Returns the list of tuples (URI, Datetime)
-            mementos = [(uri_r, None)]
-            mementos.append(tuplelist)
-            return mementos
+            tuplelist.append((uri_r, None))
+            return tuplelist
 
         else:
             # API response undefined.

@@ -3,7 +3,7 @@ from urlparse import urlparse
 from dateutil import parser as dateparser
 
 import importlib
-
+#TODO organise imports
 from conf.constants import HTTPRE, WWWRE, DATEFMT
 from conf.constants import URI_PARTS as URI
 from conf.constants import HTTP_STATUS as HTTP
@@ -13,7 +13,7 @@ from errors.timegateerror import TimegateError
 from errors.handlererror import HandlerError
 from core.timegate import Timegate
 from core.timemap import Timemap
-
+import time
 
 __author__ = 'Yorick Chollet'
 
@@ -30,11 +30,6 @@ def application(env, start_response):
 
     # The best Memento is the closest.
     best = closest
-
-    # Debug prints
-    if debug:
-        print("ENV: \n %s" % env)
-
 
     # Extracting requested values
     req_path = env.get("PATH_INFO", "/")
@@ -57,8 +52,13 @@ def application(env, start_response):
             uri_r = uriparse(req_path, req_type)
             handler = loadhandler(uri_r)
             timemap = handler.get(uri_r.geturl(), accept_datetime)
-            memento = best(timemap, accept_datetime)
-            return response(memento, start_response)
+            responsetuple = processresponse(timemap)
+            if responsetuple[0]:
+                original = responsetuple[0]
+            else:
+                original = uri_r.geturl().encode('utf8')
+            memento = best(responsetuple[1], accept_datetime)
+            return found_response(memento, original, start_response)
         except TimegateError as e:
             return error_response(e.status, e.message,
                                   start_response, headers)
@@ -131,17 +131,27 @@ def error_response(status, message, start_response, headers):
     return body
 
 
-def response(memento, start_response):
+def found_response(memento, uri_r, start_response):
     """
     Returns the best Memento requested by the user
     :param memento:
     :param start_response:
     :return:
     """
-    status = 200
-    headers = []
-    body = []
 
+    #TODO encoding response as utf8
+
+    status = 302
+    headers = [
+        ('Date', time.strftime(DATEFMT, time.gmtime())),
+        ('Vary', 'accept-datetime'),
+        ('Content-Length', '0'),
+        ('Content-Type', 'text/plain; charset=UTF-8'),
+        ('Connection', 'close'),
+        ('Location', memento[0]),
+        ('Link', '<%s>; rel="original"' % uri_r)
+    ] # TODO put all normal headers in conf.constants
+    body = []
     start_response(HTTP[status], headers)
     return body
 
@@ -170,7 +180,6 @@ def closest(timemap, accept_datetime):
     :param accept_datetime:
     :return:
     """
-
     #TODO IMplement
     return timemap[0]
 
@@ -181,22 +190,20 @@ def processresponse(hresponse):
     :param hresponse:
     :return:
     """
-
-    def tupleparser(tu):
-        (url, dt) = tu
-        return (urlparse(url).geturl(), dateparser.parse(dt).strftime(DATEFMT))
-
-    # def tuplecomparator(t1, t2):
-    #     if t1[1] :
-    #         return -1
-    #     elif :
-    #         return 0
-    #     else:
-    #         return 1
-
+    mementos = []
     try:
-        parsed_list = hresponse.map(tupleparser)
-        # sortedlist = parsed_list.sort(tuplecomparator)
-        return parsed_list
+        for tu in hresponse:
+            (url, dt) = tu
+            url_r = None
+            parsed_url = urlparse(url).geturl().encode('utf8')
+            if dt:
+                parsed_date = dateparser.parse(dt).strftime(DATEFMT).encode('utf8')
+                mementos.append((parsed_url, parsed_date))
+            else:
+                #(url, None) represents the original resource
+                url_r = parsed_url
+
+        return (url_r, mementos)
+
     except Exception as e:
         raise HandlerError('Bad response from Handler: %s' % e.message ,304)
