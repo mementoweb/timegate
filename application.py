@@ -19,6 +19,8 @@ __author__ = 'Yorick Chollet'
 
 debug = False
 
+# TODO process
+own_uri = 'http://127.0.0.1:9000'
 
 
 # TODO define if trycatch needed for badly-implemented handlers
@@ -82,12 +84,12 @@ def application(env, start_response):
             handler = loadhandler(uri_r, True)
             req = handler.get(uri_r, accept_datetime)
             (uri, mementos) = processresponse(req)
-            if uri:
-                original = uri
-            else:
-                original = uri_r
+            # if uri:
+            #     original = uri
+            # else:
+            #     original = uri_r
             memento = best(mementos, accept_datetime)
-            return respmemento(memento, original, start_response, handler.singleonly)
+            return respmemento(memento, uri_r, start_response, handler.singleonly)
         except TimegateError as e:
             return resperror(e.status, e.message,
                                   start_response, headers)
@@ -101,12 +103,12 @@ def application(env, start_response):
             handler = loadhandler(uri_r, False)
             req = handler.get(uri_r, accept_datetime)
             (uri, mementos) = processresponse(req)
-            if uri:
-                original = uri
-            else:
-                original = uri_r
-            memento = best(mementos, accept_datetime)
-            return resptimemap(memento, original, start_response)
+            # if uri:
+            #     original = uri
+            # else:
+            #     original = uri_r
+            # memento = best(mementos, accept_datetime)
+            return resptimemap(mementos, uri_r, start_response)
         except TimegateError as e:
             return resperror(e.status, e.message,
                                   start_response, headers)
@@ -169,12 +171,12 @@ def resperror(status, message, start_response, headers):
     :param headers:
     :return:
     """
-    body = ["%s \n %s" % (status, message)]
+    body = ["%s \n %s \n" % (status, message)]
     start_response(HTTP[status], headers)
     return body
 
 
-def respmemento(memento, uri_r, start_response, first=None, last=None, timemap=None):
+def respmemento(memento, uri_r, start_response, singleonly=False):
     """
     Returns the best Memento requested by the user
     :param memento:
@@ -184,6 +186,10 @@ def respmemento(memento, uri_r, start_response, first=None, last=None, timemap=N
 
     #TODO encoding response as utf8
 
+    linkheaderval = '<%s>; rel="original"' % uri_r.encode('utf8')
+    if not singleonly:
+        linkheaderval += ', <%s/%s/%s>; rel="timemap"' % (own_uri, URI['T'], uri_r.encode('utf8'))
+
     status = 302
     headers = [
         ('Date', time.strftime(DATEFMT, time.gmtime())),
@@ -192,7 +198,7 @@ def respmemento(memento, uri_r, start_response, first=None, last=None, timemap=N
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close'),
         ('Location', memento.encode('utf8')),
-        ('Link', '<%s>; rel="original"' % uri_r.encode('utf8'))
+        ('Link', linkheaderval)
     ]
     # TODO put all normal headers in conf.constants
     body = []
@@ -200,34 +206,78 @@ def respmemento(memento, uri_r, start_response, first=None, last=None, timemap=N
     return body
 
 
-def resptimemap(memento, original, start_response):
-    raise NotImplementedError
+def resptimemap(mementos, uri_r, start_response):
     #TODO This
     status = 200
-    headers = []
-    body = []
+
+    orval = '<%s>; rel="original"' % uri_r.encode('utf8')
+    tgval = '<%s/%s/%s>; rel="timegate"' % (own_uri, URI['G'], uri_r.encode('utf8'))
+    selfval = '<%s/%s/%s>; rel="self"; type="application/link-format"' % (own_uri, URI['T'], uri_r.encode('utf8'))
+
+    print mementos
+    links = []
+
+    # TODO fix redundance in first/last?...
+    if mementos:
+        first = mementos[0][0]
+        firstdt = dateparser.parse(mementos[0][1])
+        last = mementos[0][0]
+        lastdt = dateparser.parse(mementos[0][1])
+
+        for (url, dtstr) in mementos:
+            dt = dateparser.parse(dtstr)
+            if dt < firstdt:
+                firstdt = dt
+                first = url
+            elif dt > lastdt:
+                lastdt = dt
+                last = url
+
+            memlink = '<%s>; rel="memento"; datetime="%s"' % (url.encode('utf8'), dtstr.encode('utf8'))
+            links.append(memlink)
+        firstdtstr = firstdt.strftime(DATEFMT).encode('utf8')
+        lastdtstr = lastdt.strftime(DATEFMT).encode('utf8')
+        firstlink = '<%s>; rel="first memento"; datetime="%s"' % (first.encode('utf8'), firstdtstr)
+        lastlink = '<%s>; rel="last memento"; datetime="%s"' % (last.encode('utf8'), lastdtstr)
+        links.append(firstlink)
+        links.append(lastlink)
+        selfvalfu = '%s; from="%s"; until="%s"' % (selfval, firstdtstr, lastdtstr)
+    links.append(orval)
+    links.append(tgval)
+    links.append(selfvalfu)
+    timemapstr = '\n, '.join(links) + '\n'
+
+
+    headers = [
+        ('Date', time.strftime(DATEFMT, time.gmtime())),
+        ('Content-Length', str(len(timemapstr))),
+        ('Content-Type', 'text/plain; charset=UTF-8'),
+        ('Connection', 'close')]
+    body = [timemapstr]
     start_response(HTTP[status], headers)
     return body
 
 
-def loadhandler(uri, singleonly=False):
+def loadhandler(uri, singlerequest=False):
     """
     Loads the handler for the requested URI if it exists.
     :param uri:
     :return:
     """
 
-    if singleonly:
+    if singlerequest:
         mapper = tgate_mapper
+        method = 'timegate'
     else:
         mapper = tmap_mapper
+        method = 'timemap'
 
     #TODO define if FIRST/ALL...
     for (regex, handler) in mapper:
         if bool(regex.match(uri)):
             return handler()
 
-    raise URIRequestError('Cannot find any handler for %s' % uri, 404)
+    raise URIRequestError('Cannot find any %s handler for %s' % (method, uri), 404)
 
 
 def closest(timemap, accept_datetime):
@@ -258,7 +308,17 @@ def processresponse(hresponse):
     :return:
     """
     mementos = []
+
+    # Check if Empty or if tuple
+    if not hresponse:
+        return (None, None)
+    elif isinstance(hresponse, tuple):
+        hresponse = [hresponse]
+    elif not isinstance(hresponse, list):
+        raise Exception('response must be either None, 2-Tuple or 2-Tuple array')
+
     try:
+        print hresponse
         for (url, dt) in hresponse:
             url_r = None
             parsed_url = urlparse(url).geturl()
@@ -272,5 +332,7 @@ def processresponse(hresponse):
         return (url_r, mementos)
 
     except Exception as e:
-        raise HandlerError('Bad response from Handler: %s' % e.message ,304)
+        raise HandlerError('Bad response from Handler:'
+                           'response must be either None, (url, date)-Tuple or (url, date)-Tuple array, where '
+                           'url, date are with standards formats  %s' % e.message, 503)
 

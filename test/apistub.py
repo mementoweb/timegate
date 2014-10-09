@@ -18,37 +18,37 @@ def application(env, start_response):
     status = '200 OK'
     headers = [('Content-Type', 'application/json; charset=utf-8')]
 
-    if req.startswith('/memento'):
+    if req.startswith('/single'):
         body = [
             """
             {
-                "original_uri": "http://example.com/",
-                "timegate_uri": "http://an.archive.org/timegate/http://example.com/",
+                "original_uri": "http://foo.bar/",
+                "timegate_uri": "http://an.archive.org/timegate/http://foo.bar/",
                 "timemap_uri": {
-                    "json_format": "http://an.archive.org/timemap/json/http://example.com/",
-                    "link_format": "http://an.archive.org/timemap/link/http://example.com/"
+                    "json_format": "http://an.archive.org/timemap/json/http://foo.bar/",
+                    "link_format": "http://an.archive.org/timemap/link/http://foo.bar/"
                 },
                 "mementos": {
                     "first": {
                         "datetime": "2000-06-21T04:41:56Z",
-                        "uri": "http://an.archive.org/20000621044156/http://example.com/"
+                        "uri": "http://an.archive.org/20000621044156/http://www.foo.bar/"
                     },
                     "last": {
                         "datetime": "2012-08-31T12:22:34Z",
-                        "uri": "http://an.archive.org/20120831122234/http://example.com/"
+                        "uri": "http://an.archive.org/20120831122234/http://foo.bar/"
                     },
                     "all": [
                         {
                             "datetime": "2000-06-21T04:41:56Z",
-                            "uri": "http://an.archive.org/20000621044156/http://example.com/"
+                            "uri": "http://an.archive.org/20000621044156/http://foo.bar/"
                         },
                         {
                             "datetime": "2008-04-10T20:30:51Z",
-                            "uri": "http://an.archive.org/20080410203051/http://example.com/"
+                            "uri": "http://an.archive.org/20080410203051/http://foo.bar/"
                         },
                         {
                             "datetime": "2012-08-31T12:22:34Z",
-                            "uri": "http://an.archive.org/20120831122234/http://example.com/"
+                            "uri": "http://an.archive.org/20120831122234/http://foo.bar/"
                         }
                     ]
                 }

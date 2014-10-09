@@ -11,7 +11,6 @@ from errors.handlererror import HandlerError
 
 class OtherHandler(Handler):
 
-
     def __init__(self):
 
         # Regular Expressions! must begin with http:// or https://
@@ -19,11 +18,9 @@ class OtherHandler(Handler):
                              'http://www.another.com/*'
                              ]
 
-        self.singleonly = True
+        self.singleonly = False
 
-
-
-    def get(self, uri, datetime=None):
+    def get(self, uri, datetime):
         api_uri = 'http://127.0.0.1:9001/timemap2/'
 
         # Requests the API
