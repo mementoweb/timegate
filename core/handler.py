@@ -10,6 +10,8 @@ from conf.constants import PROXIES
 class Handler:
 
     resourcebase = None
+    # TODO decide if either here or PER REGEX
+    singleonly = False
 
     def __init__(self):
         raise NotImplementedError

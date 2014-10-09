@@ -19,14 +19,15 @@ class OtherHandler(Handler):
                              'http://www.another.com/*'
                              ]
 
-        self.api_uri = 'http://127.0.0.1:9001/timemap2/'
+        self.singleonly = True
 
 
 
     def get(self, uri, datetime=None):
+        api_uri = 'http://127.0.0.1:9001/timemap2/'
 
         # Requests the API
-        req = self.request(self.api_uri, uri)
+        req = self.request(api_uri, uri)
 
         # Handles API Response
         if not req or req.status_code == 404:

@@ -1,9 +1,7 @@
-from urlparse import urlparse
-
-from dateutil import parser as dateparser
-
-import importlib
 #TODO organise imports
+from urlparse import urlparse
+from dateutil import parser as dateparser
+import importlib
 from conf.constants import HTTPRE, WWWRE, DATEFMT
 from conf.constants import URI_PARTS as URI
 from conf.constants import HTTP_STATUS as HTTP
@@ -25,7 +23,8 @@ debug = False
 
 # TODO define if trycatch needed for badly-implemented handlers
 # Builds the mapper from URI regular expression to handler class
-mapper = []
+tgate_mapper = []
+tmap_mapper = []
 extpath = 'core/extensions/'
 # Finds every python files in the extensions folder and imports it
 filelist = glob.glob(extpath+"*.py")
@@ -45,7 +44,9 @@ for fn in filelist:
             handler = handlername()
             for regex in handler.resourcebase:
                 # Compiles the regex and maps it to the handler python class
-                mapper.append((re.compile(regex), handlername))
+                tgate_mapper.append((re.compile(regex), handlername))
+                if not handler.singleonly:
+                    tmap_mapper.append((re.compile(regex), handlername))
 
 
 def application(env, start_response):
@@ -78,23 +79,37 @@ def application(env, start_response):
         try:
             accept_datetime = dateparse(req_datetime)
             uri_r = uriparse(req_path, req_type)
-            handler = loadhandler(uri_r)
-            timemap = handler.get(uri_r, accept_datetime)
-            (uri, mementos) = processresponse(timemap)
+            handler = loadhandler(uri_r, True)
+            req = handler.get(uri_r, accept_datetime)
+            (uri, mementos) = processresponse(req)
             if uri:
                 original = uri
             else:
                 original = uri_r
             memento = best(mementos, accept_datetime)
-            return found_response(memento, original, start_response)
+            return respmemento(memento, original, start_response, handler.singleonly)
         except TimegateError as e:
-            return error_response(e.status, e.message,
+            return resperror(e.status, e.message,
                                   start_response, headers)
 
     # TimeMap Logic
     elif req_type == URI['T']:
-        body = ["400 - Bad request. Timemap not implemented yet \n"]
-        status = 400
+       # Processing request
+        try:
+            accept_datetime = dateparse(req_datetime)
+            uri_r = uriparse(req_path, req_type)
+            handler = loadhandler(uri_r, False)
+            req = handler.get(uri_r, accept_datetime)
+            (uri, mementos) = processresponse(req)
+            if uri:
+                original = uri
+            else:
+                original = uri_r
+            memento = best(mementos, accept_datetime)
+            return resptimemap(memento, original, start_response)
+        except TimegateError as e:
+            return resperror(e.status, e.message,
+                                  start_response, headers)
 
     # TestCase Logic
     elif req_type == "test":
@@ -106,7 +121,7 @@ def application(env, start_response):
         if debug:
             print "URI type does not match timegate or timemap"
 
-    return error_response(status, message, start_response, headers)
+    return resperror(status, message, start_response, headers)
 
 
 def dateparse(datestr):
@@ -145,7 +160,7 @@ def uriparse(pathstr, typestr):
     return parsed.geturl()
 
 
-def error_response(status, message, start_response, headers):
+def resperror(status, message, start_response, headers):
     """
     Returns an error message to the user
     :param status:
@@ -159,7 +174,7 @@ def error_response(status, message, start_response, headers):
     return body
 
 
-def found_response(memento, uri_r, start_response):
+def respmemento(memento, uri_r, start_response, first=None, last=None, timemap=None):
     """
     Returns the best Memento requested by the user
     :param memento:
@@ -178,18 +193,34 @@ def found_response(memento, uri_r, start_response):
         ('Connection', 'close'),
         ('Location', memento.encode('utf8')),
         ('Link', '<%s>; rel="original"' % uri_r.encode('utf8'))
-    ] # TODO put all normal headers in conf.constants
+    ]
+    # TODO put all normal headers in conf.constants
     body = []
     start_response(HTTP[status], headers)
     return body
 
 
-def loadhandler(uri):
+def resptimemap(memento, original, start_response):
+    raise NotImplementedError
+    #TODO This
+    status = 200
+    headers = []
+    body = []
+    start_response(HTTP[status], headers)
+    return body
+
+
+def loadhandler(uri, singleonly=False):
     """
     Loads the handler for the requested URI if it exists.
     :param uri:
     :return:
     """
+
+    if singleonly:
+        mapper = tgate_mapper
+    else:
+        mapper = tmap_mapper
 
     #TODO define if FIRST/ALL...
     for (regex, handler) in mapper:
@@ -242,3 +273,4 @@ def processresponse(hresponse):
 
     except Exception as e:
         raise HandlerError('Bad response from Handler: %s' % e.message ,304)
+
