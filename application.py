@@ -11,9 +11,8 @@ from errors.urierror import URIRequestError
 from errors.dateerror import DateRequestError
 from errors.timegateerror import TimegateError
 from errors.handlererror import HandlerError
-from core.timegate import Timegate
-from core.timemap import Timemap
 import time
+from datetime import timedelta
 import glob
 import inspect
 import re
@@ -36,10 +35,10 @@ for fn in filelist:
     module = importlib.import_module(modulepath)
     # Finds all python classnames within the file
     modulemembers = inspect.getmembers(module, inspect.isclass)
-    for mem in modulemembers:
+    for (name, path) in modulemembers:
         # If the class was not imported, extract the classname
-        if str(mem[1]) == (modulepath + '.' + mem[0]):
-            classname = mem[0]
+        if str(path) == (modulepath + '.' + name):
+            classname = name
             # Get the python class object from the classname and module
             handlername = getattr(module, classname)
             # Extract all URI regular expressions that the handlers manages
@@ -57,7 +56,7 @@ def application(env, start_response):
     :return: The response body.
     """
 
-    # The best Memento is the closest.
+    # The best Memento is the closest in time.
     best = closest
 
     # Extracting requested values
@@ -81,12 +80,12 @@ def application(env, start_response):
             uri_r = uriparse(req_path, req_type)
             handler = loadhandler(uri_r)
             timemap = handler.get(uri_r, accept_datetime)
-            responsetuple = processresponse(timemap)
-            if responsetuple[0]:
-                original = responsetuple[0]
+            (uri, mementos) = processresponse(timemap)
+            if uri:
+                original = uri
             else:
-                original = uri_r.encode('utf8')
-            memento = best(responsetuple[1], accept_datetime)
+                original = uri_r
+            memento = best(mementos, accept_datetime)
             return found_response(memento, original, start_response)
         except TimegateError as e:
             return error_response(e.status, e.message,
@@ -177,8 +176,8 @@ def found_response(memento, uri_r, start_response):
         ('Content-Length', '0'),
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close'),
-        ('Location', memento[0]),
-        ('Link', '<%s>; rel="original"' % uri_r)
+        ('Location', memento.encode('utf8')),
+        ('Link', '<%s>; rel="original"' % uri_r.encode('utf8'))
     ] # TODO put all normal headers in conf.constants
     body = []
     start_response(HTTP[status], headers)
@@ -193,8 +192,7 @@ def loadhandler(uri):
     """
 
     #TODO define if FIRST/ALL...
-    for rule in mapper:
-        (regex, handler) = rule
+    for (regex, handler) in mapper:
         if bool(regex.match(uri)):
             return handler()
 
@@ -205,11 +203,21 @@ def closest(timemap, accept_datetime):
     """
     Finds the chronologically closest memento
     :param timemap:
-    :param accept_datetime:
+    :param accept_datetime: the time object
     :return:
     """
-    #TODO IMplement
-    return timemap[0]
+    #TODO max
+
+    delta = timedelta.max
+    memento = None
+
+    for (url, dt) in timemap:
+        diff = abs(accept_datetime - dateparser.parse(dt))
+        if diff < delta:
+            memento = url
+            delta = diff
+
+    return memento
 
 
 def processresponse(hresponse):
@@ -220,12 +228,11 @@ def processresponse(hresponse):
     """
     mementos = []
     try:
-        for tu in hresponse:
-            (url, dt) = tu
+        for (url, dt) in hresponse:
             url_r = None
-            parsed_url = urlparse(url).geturl().encode('utf8')
+            parsed_url = urlparse(url).geturl()
             if dt:
-                parsed_date = dateparser.parse(dt).strftime(DATEFMT).encode('utf8')
+                parsed_date = dateparser.parse(dt).strftime(DATEFMT)
                 mementos.append((parsed_url, parsed_date))
             else:
                 #(url, None) represents the original resource

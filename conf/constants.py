@@ -17,6 +17,7 @@ URI_PARTS = {
     'T': 'timemap'
 }
 
+#TODO remove
 PROXIES = {'http': 'http://blueone.lanl.gov:8080',
            'https': 'http://blueone.lanl.gov:8080'}
 
