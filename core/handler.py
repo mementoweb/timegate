@@ -6,17 +6,19 @@ from errors.handlererror import HandlerError
 
 from conf.constants import PROXIES
 
+#TODO defeine what is imported where
 
 class Handler:
 
-    resourcebase = None
-    # TODO decide if either here or PER REGEX
+    # List of regex strings for the original resources that the handler manages
+    resources = []
+    # Boolean indicating if the handler can only request one Memento at a time
     singleonly = False
 
     def __init__(self):
         raise NotImplementedError
 
-    def get(self, uri_r, datetime=None):
+    def get(self, uri_r, datetime):
         """
         Requests the mementos for a resource.
 
@@ -28,6 +30,13 @@ class Handler:
         raise NotImplementedError
 
     def request(self, host, resource):
+        """
+        Handler helper function. Requests the resource at host.
+        :param host: The hostname of the API
+        :param resource: The original resource path
+        :return: A requests response object
+        Raises HandlerError if the requests fails to access the API
+        """
         try:
             req = requests.get(host+resource)
             return req

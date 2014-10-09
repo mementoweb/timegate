@@ -1,54 +1,51 @@
-#TODO organise imports
-from urlparse import urlparse
-from dateutil import parser as dateparser
-import importlib
-from conf.constants import HTTPRE, WWWRE, DATEFMT
-from conf.constants import URI_PARTS as URI
-from conf.constants import HTTP_STATUS as HTTP
-from errors.urierror import URIRequestError
-from errors.dateerror import DateRequestError
-from errors.timegateerror import TimegateError
-from errors.handlererror import HandlerError
-import time
-from datetime import timedelta
-import glob
-import inspect
-import re
-
 __author__ = 'Yorick Chollet'
 
-debug = False
+import importlib
+import inspect
+import time
+import re
+import glob
+from urlparse import urlparse
+from datetime import timedelta
 
-# TODO process
-own_uri = 'http://127.0.0.1:9000'
+from dateutil import parser as dateparser
+
+from conf.constants import HTTPRE, WWWRE, DATEFMT, URI_PARTS, HTTP_STATUS, HOST, EXTENSIONS_PATH
+from errors.urierror import URIRequestError
+from errors.dateerror import DateTimeError
+from errors.timegateerror import TimegateError
+from errors.handlererror import HandlerError
 
 
 # TODO define if trycatch needed for badly-implemented handlers
 # Builds the mapper from URI regular expression to handler class
-tgate_mapper = []
-tmap_mapper = []
-extpath = 'core/extensions/'
-# Finds every python files in the extensions folder and imports it
-filelist = glob.glob(extpath+"*.py")
-for fn in filelist:
-    basen = fn[len(extpath):-3]
-    modulepath = extpath.replace('/', '.')+basen
-    module = importlib.import_module(modulepath)
-    # Finds all python classnames within the file
-    modulemembers = inspect.getmembers(module, inspect.isclass)
-    for (name, path) in modulemembers:
-        # If the class was not imported, extract the classname
-        if str(path) == (modulepath + '.' + name):
-            classname = name
-            # Get the python class object from the classname and module
-            handlername = getattr(module, classname)
-            # Extract all URI regular expressions that the handlers manages
-            handler = handlername()
-            for regex in handler.resourcebase:
-                # Compiles the regex and maps it to the handler python class
-                tgate_mapper.append((re.compile(regex), handlername))
-                if not handler.singleonly:
-                    tmap_mapper.append((re.compile(regex), handlername))
+try:
+    tgate_mapper = []
+    tmap_mapper = []
+    # Finds every python files in the extensions folder and imports it
+    files = glob.glob(EXTENSIONS_PATH+"*.py")
+    for fname in files:
+        basename = fname[len(EXTENSIONS_PATH):-3]
+        modpath = EXTENSIONS_PATH.replace('/', '.')+basename
+        module = importlib.import_module(modpath)
+        # Finds all python classnames within the file
+        mod_members = inspect.getmembers(module, inspect.isclass)
+        for (name, path) in mod_members:
+            # If the class was not imported, extract the classname
+            if str(path) == (modpath + '.' + name):
+                classname = name
+                # Get the python class object from the classname and module
+                handler_class = getattr(module, classname)
+                # Extract all URI regular expressions that the handlers manages
+                handler = handler_class()
+                for regex in handler.resources:
+                    # Compiles the regex and maps it to the handler python class
+                    tgate_mapper.append((re.compile(regex), handler_class))
+                    if not handler.singleonly:
+                        tmap_mapper.append((re.compile(regex), handler_class))
+
+except Exception as e:
+    raise Exception("Fatal Error loading handlers: %s" % e.message)
 
 
 def application(env, start_response):
@@ -59,107 +56,81 @@ def application(env, start_response):
     :return: The response body.
     """
 
-    # The best Memento is the closest in time.
-    best = closest
-
     # Extracting requested values
     req_path = env.get("PATH_INFO", "/")
     req_datetime = env.get("HTTP_ACCEPT_DATETIME")
 
-    # Standard Response
-    status = 404
-    message = "404 - Not Found \n"
+    # Standard Headers
     headers = [('Content-Type', 'text/html')]
 
-    # Processing request path
+    # Processing request type and path
     req_path = req_path.lstrip('/')
     req_type = req_path.split('/', 1)[0]
 
-    # TimeGate Logic
-    if req_type == URI['G']:
-        # Processing request
+    # TimeGate Request
+    if req_type == URI_PARTS['G']:
         try:
-            accept_datetime = dateparse(req_datetime)
-            uri_r = uriparse(req_path, req_type)
-            handler = loadhandler(uri_r, True)
-            req = handler.get(uri_r, accept_datetime)
-            (uri, mementos) = processresponse(req)
-            # if uri:
-            #     original = uri
-            # else:
-            #     original = uri_r
-            memento = best(mementos, accept_datetime)
-            return respmemento(memento, uri_r, start_response, handler.singleonly)
+            return timegate(req_path, start_response, req_datetime)
         except TimegateError as e:
             return resperror(e.status, e.message,
                                   start_response, headers)
 
-    # TimeMap Logic
-    elif req_type == URI['T']:
-       # Processing request
+    # TimeMap Request
+    elif req_type == URI_PARTS['T']:
         try:
-            accept_datetime = dateparse(req_datetime)
-            uri_r = uriparse(req_path, req_type)
-            handler = loadhandler(uri_r, False)
-            req = handler.get(uri_r, accept_datetime)
-            (uri, mementos) = processresponse(req)
-            # if uri:
-            #     original = uri
-            # else:
-            #     original = uri_r
-            # memento = best(mementos, accept_datetime)
-            return resptimemap(mementos, uri_r, start_response)
+            return timemap(req_path, start_response, req_datetime)
         except TimegateError as e:
             return resperror(e.status, e.message,
                                   start_response, headers)
 
-    # TestCase Logic
-    elif req_type == "test":
-        body = ["server running"]
-        status = 200
-
+    # Unknown Request
     else:
-        message = "URI type does not match timegate or timemap"
-        if debug:
-            print "URI type does not match timegate or timemap"
+        status = 404
+        message = "Service request type '%s' does not match '%s' or '%s'" % \
+                  (req_type, URI_PARTS['T'], URI_PARTS['G'])
+        return resperror(status, message, start_response, headers)
 
-    return resperror(status, message, start_response, headers)
 
-
-def dateparse(datestr):
+def parsedt(datestr):
+    """
+    Parses the requested date string into a dateutil time object
+    Raises DateTimeError if the parse fails to produce a datetime.
+    :param datestr: A date string, in a common format.
+    :return: the dateutil time object
+    """
     try:
         date = dateparser.parse(datestr)
         return date
     except Exception as e:
-        raise DateRequestError("Error on Accept-Datetime: %s "
-                               "\n \n details: %s" % (datestr, e.message))
+        raise DateTimeError("Error parsing 'Accept-Datetime: %s' \n"
+                               "Message: %s" % (datestr, e.message))
 
 
-#TODO whitespaces escapes
-def uriparse(pathstr, typestr):
+def parseuri(pathstr, methodstr):
     """
-    Parses the requested URI
-    :param urlstr:
-    :return:
+    Parses the requested URI string.
+    Raises URIRequestError if the parse fails to recognize a valid URI
+    :param urlstr: A URI string, in a common format.
+    :return: the URI string object
     """
 
-    path = pathstr[len(typestr+'/'):] #removes leading timegate/
-
-    if not path:
-        raise URIRequestError("Error: Empty path")
-
-    # Trying to fix incomplete URI
-    if not bool(HTTPRE.match(path)):
-        if not bool(WWWRE.match(path)):
-            path = 'www.'+path
-        path = 'http://'+path
+    print pathstr
 
     try:
-        parsed = urlparse(path, scheme='http')
-    except Exception as e:
-        raise URIRequestError("Error: Cannot parse path: %s" % e.message)
+        #removes leading 'method/' and replaces whitespaces
+        path = pathstr[len(methodstr+'/'):].replace(' ', '%20')
 
-    return parsed.geturl()
+        # Trying to fix incomplete URI
+        if not bool(HTTPRE.match(path)):
+            if not bool(WWWRE.match(path)):
+                path = 'www.'+path
+            path = 'http://'+path
+
+        parsed = urlparse(path, scheme='http')
+        return parsed.geturl()
+    except Exception as e:
+        raise URIRequestError("Error: Cannot parse requested path '%s' \n"
+                              "message: %s" % (pathstr, e.message))
 
 
 def resperror(status, message, start_response, headers):
@@ -172,7 +143,7 @@ def resperror(status, message, start_response, headers):
     :return:
     """
     body = ["%s \n %s \n" % (status, message)]
-    start_response(HTTP[status], headers)
+    start_response(HTTP_STATUS[status], headers)
     return body
 
 
@@ -188,7 +159,7 @@ def respmemento(memento, uri_r, start_response, singleonly=False):
 
     linkheaderval = '<%s>; rel="original"' % uri_r.encode('utf8')
     if not singleonly:
-        linkheaderval += ', <%s/%s/%s>; rel="timemap"' % (own_uri, URI['T'], uri_r.encode('utf8'))
+        linkheaderval += ', <%s/%s/%s>; rel="timemap"' % (HOST, URI_PARTS['T'], uri_r.encode('utf8'))
 
     status = 302
     headers = [
@@ -202,67 +173,73 @@ def respmemento(memento, uri_r, start_response, singleonly=False):
     ]
     # TODO put all normal headers in conf.constants
     body = []
-    start_response(HTTP[status], headers)
+    start_response(HTTP_STATUS[status], headers)
     return body
 
 
 def resptimemap(mementos, uri_r, start_response):
-    #TODO This
-    status = 200
+    """
+    Creates and sends a timemap response.
+    :param mementos: A list of (uri, datetime) tuples representing a timemap
+    :param uri_r: The URI-R of the original resource
+    :param start_response: WSGI callback function
+    :return: The timemap body as a list of one element
+    """
 
-    orval = '<%s>; rel="original"' % uri_r.encode('utf8')
-    tgval = '<%s/%s/%s>; rel="timegate"' % (own_uri, URI['G'], uri_r.encode('utf8'))
-    selfval = '<%s/%s/%s>; rel="self"; type="application/link-format"' % (own_uri, URI['T'], uri_r.encode('utf8'))
+    # Adds Original, TimeGate and TimeMap links
+    original_link = '<%s>; rel="original"' % uri_r.encode('utf8')
+    timefate_link = '<%s/%s/%s>; rel="timegate"' % (HOST, URI_PARTS['G'], uri_r.encode('utf8'))
+    self_link = '<%s/%s/%s>; rel="self"; type="application/link-format"' % (HOST, URI_PARTS['T'], uri_r.encode('utf8'))
 
-    print mementos
-    links = []
-
-    # TODO fix redundance in first/last?...
+    # Browse through Mementos to find the first and the last
+    # Generates TimeMap links list in the process
+    mementos_links = []
     if mementos:
-        first = mementos[0][0]
-        firstdt = dateparser.parse(mementos[0][1])
-        last = mementos[0][0]
-        lastdt = dateparser.parse(mementos[0][1])
+        first_url = mementos[0][0]
+        first_date = dateparser.parse(mementos[0][1])
+        last_url = mementos[0][0]
+        last_date = dateparser.parse(mementos[0][1])
 
-        for (url, dtstr) in mementos:
-            dt = dateparser.parse(dtstr)
-            if dt < firstdt:
-                firstdt = dt
-                first = url
-            elif dt > lastdt:
-                lastdt = dt
-                last = url
+        for (urlstr, datestr) in mementos:
+            date = dateparser.parse(datestr)
+            if date < first_date:
+                first_date = date
+                first_url = urlstr
+            elif date > last_date:
+                last_date = date
+                last_url = urlstr
 
-            memlink = '<%s>; rel="memento"; datetime="%s"' % (url.encode('utf8'), dtstr.encode('utf8'))
-            links.append(memlink)
-        firstdtstr = firstdt.strftime(DATEFMT).encode('utf8')
-        lastdtstr = lastdt.strftime(DATEFMT).encode('utf8')
-        firstlink = '<%s>; rel="first memento"; datetime="%s"' % (first.encode('utf8'), firstdtstr)
-        lastlink = '<%s>; rel="last memento"; datetime="%s"' % (last.encode('utf8'), lastdtstr)
-        links.append(firstlink)
-        links.append(lastlink)
-        selfvalfu = '%s; from="%s"; until="%s"' % (selfval, firstdtstr, lastdtstr)
-    links.append(orval)
-    links.append(tgval)
-    links.append(selfvalfu)
-    timemapstr = '\n, '.join(links) + '\n'
+            linkstr = '<%s>; rel="memento"; datetime="%s"' % (urlstr.encode('utf8'), datestr.encode('utf8'))
+            mementos_links.append(linkstr)
+        first_datestr = first_date.strftime(DATEFMT).encode('utf8')
+        last_datestr = last_date.strftime(DATEFMT).encode('utf8')
+        firstlink = '<%s>; rel="first memento"; datetime="%s"' % (first_url.encode('utf8'), first_datestr)
+        lastlink = '<%s>; rel="last memento"; datetime="%s"' % (last_url.encode('utf8'), last_datestr)
+        mementos_links.insert(0, lastlink)
+        mementos_links.insert(0, firstlink)
+        self_link = '%s; from="%s"; until="%s"' % (self_link, first_datestr, last_datestr)
+    # Aggregates all link strings and constructs the TimeMap body
+    links = [original_link, timefate_link, self_link]
+    links.extend(mementos_links)
+    body = ',\n'.join(links) + '\n'
 
-
+    # Builds HTTP Response and WSGI return
+    status = 200
     headers = [
         ('Date', time.strftime(DATEFMT, time.gmtime())),
-        ('Content-Length', str(len(timemapstr))),
+        ('Content-Length', str(len(body))),
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close')]
-    body = [timemapstr]
-    start_response(HTTP[status], headers)
-    return body
+    start_response(HTTP_STATUS[status], headers)
+    return [body]
 
 
 def loadhandler(uri, singlerequest=False):
     """
     Loads the handler for the requested URI if it exists.
-    :param uri:
-    :return:
+    :param uri: The URI to match to a handler
+    :return: the handler object
+    Raises URIRequestError if no handler matches this URI
     """
 
     if singlerequest:
@@ -272,7 +249,7 @@ def loadhandler(uri, singlerequest=False):
         mapper = tmap_mapper
         method = 'timemap'
 
-    #TODO define if FIRST/ALL...
+    #TODO define what to do if multiple matches
     for (regex, handler) in mapper:
         if bool(regex.match(uri)):
             return handler()
@@ -287,7 +264,6 @@ def closest(timemap, accept_datetime):
     :param accept_datetime: the time object
     :return:
     """
-    #TODO max
 
     delta = timedelta.max
     memento = None
@@ -301,33 +277,36 @@ def closest(timemap, accept_datetime):
     return memento
 
 
-def processresponse(hresponse):
+def parse_response(handler_response):
     """
-    Controls the response from the Handler
-    :param hresponse:
-    :return:
+    Controls and parses the response from the Handler. Also extracts URI-R if provided
+    as a tuple with the form (URI, None) in the list.
+    :param handler_response: Either None, a tuple (URI, date) or a list of (URI, date)
+    where one tuple can have 'None' date to indicate that this URI is the original resource's.
+    :return: A tuple (URI-R, Mementos) where Mementos is a (URI, date)-list of
+    all Mementos. In the response, and all URIs/dates are strings and are valid.
     """
+
     mementos = []
 
     # Check if Empty or if tuple
-    if not hresponse:
+    if not handler_response:
         return (None, None)
-    elif isinstance(hresponse, tuple):
-        hresponse = [hresponse]
-    elif not isinstance(hresponse, list):
-        raise Exception('response must be either None, 2-Tuple or 2-Tuple array')
+    elif isinstance(handler_response, tuple):
+        handler_response = [handler_response]
+    elif not isinstance(handler_response, list):
+        raise Exception('handler_response must be either None, 2-Tuple or 2-Tuple array')
 
     try:
-        print hresponse
-        for (url, dt) in hresponse:
+        for (url, date) in handler_response:
             url_r = None
-            parsed_url = urlparse(url).geturl()
-            if dt:
-                parsed_date = dateparser.parse(dt).strftime(DATEFMT)
-                mementos.append((parsed_url, parsed_date))
+            valid_urlstr = urlparse(url).geturl()
+            if date:
+                valid_datestr = dateparser.parse(date).strftime(DATEFMT)
+                mementos.append((valid_urlstr, valid_datestr))
             else:
                 #(url, None) represents the original resource
-                url_r = parsed_url
+                url_r = valid_urlstr
 
         return (url_r, mementos)
 
@@ -336,3 +315,53 @@ def processresponse(hresponse):
                            'response must be either None, (url, date)-Tuple or (url, date)-Tuple array, where '
                            'url, date are with standards formats  %s' % e.message, 503)
 
+
+def timegate(req_path, start_response, req_datetime):
+    """
+    Handles timegate high-level logic. Fetch the Memento for the requested URI
+    at the requested date time. Returns a HTTP 302 response if it exists.
+    :param req_datetime: The Accept-Datetime string
+    :param req_path: The requested original resource URI
+    :param start_response: WSGI callback function
+    :return: The body of the HTTP response
+    """
+
+    # Parses the date time and original resoure URI
+    accept_datetime = parsedt(req_datetime)
+    uri_r = parseuri(req_path, URI_PARTS['G'])
+    # Dynamically loads the handler for that resource
+    handler = loadhandler(uri_r, True)
+    # Runs the handler's API request for the Memento
+    req = handler.get(uri_r, accept_datetime)
+    # Verifies and validates handler response
+    (uri, mementos) = parse_response(req)
+    # If the handler returned several Mementos, take the closest
+    memento = closest(mementos, accept_datetime)
+    # Generates the TimeGate response body and Headers
+    return respmemento(memento, uri_r, start_response, handler.singleonly)
+
+def timemap(req_path, start_response, req_datetime=None):
+    """
+    Handles TimeMap high-level logic. Fetches all Mementos for an Original
+    Resource and builds the TimeMap response. Returns a HTTP 200 response if it
+    exists with the timemap in the message body.
+    :param req_datetime: The Accept-Datetime string, if provided
+    :param req_path: The requested original resource URI
+    :param start_response: WSGI callback function
+    :return: The body of the HTTP response
+    """
+
+    # Parses the date time if it was provided. Parses the original resource URI
+    if req_datetime:
+        accept_datetime = parsedt(req_datetime)
+    else:
+        accept_datetime = None
+    uri_r = parseuri(req_path, URI_PARTS['T'])
+    # Dynamically loads the handler for that resource.
+    handler = loadhandler(uri_r, False)
+    # Runs the handler's API request for all Mementos
+    req = handler.get(uri_r, accept_datetime)
+    # Verifies and validates handler response
+    (uri, mementos) = parse_response(req)
+    # Generates the TimeMap response body and Headers
+    return resptimemap(mementos, uri_r, start_response)

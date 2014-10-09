@@ -5,35 +5,47 @@ __author__ = 'Yorick Chollet'
 from core.handler import Handler
 from errors.handlererror import HandlerError
 
-#TODO define what needs to be imported in superclass, so what will be needed in
-#Handlers
-
 
 class ExampleHandler(Handler):
 
 
     def __init__(self):
 
-        # Regular Expressions! must begin with http:// or https://
-        self.resourcebase = ['https?://www.example.com/*',
+        # Regular Expressions of original resources that the Handler manages
+        self.resources = ['https?://www.example.com/*',
                              'https?://archive.example.com/resource/*']
 
+        # Boolean indicating if the handler can only request one Memento at a time
         self.singleonly = False
 
     def get(self, uri, datetime=None):
+        """
+        Handler get method.
+        :param uri: The original resource URI for which we need a Memento or a TimeMap
+        :param datetime: Optional datetime argument if the Handler wishes to choose the best itself.
+        :return:
+            - None if the handler does not find any Memento for the requested resource
+            - (URI, Datetime) strings tuple if one Memento is returned (basic case for singleonly)
+            - [(URI, Datetime)] strings tuple array if several Memento are
+            returned. The tuple (URI-R, None) can be used to differentiate
+            between the original resource URI and Mememtos
+        """
+
+        # Example API URI
         api_uri = 'http://127.0.0.1:9001/timemap1/'
         # Requests the API
-        req = self.request(api_uri, uri)
+        response = self.request(api_uri, uri)
 
         # Handles API Response
-        if not req or req.status_code == 404:
+        if not response or response.status_code == 404:
             raise HandlerError("Cannot find resource on version server.", 404)
-        elif req.status_code == 200:
+
+        elif response.status_code == 200:
             # Assume the API handles the requests correctly
-            assert (req.headers['content-type'].startswith('application/json'))
+            assert (response.headers['content-type'].startswith('application/json'))
 
             # Extract the JSON elements URI-R and (Mementos, Datetime) pairs
-            json = req.json()
+            json = response.json()
             uri_r = json['original_uri']
             dict_list = json['mementos']['all']
 

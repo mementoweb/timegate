@@ -3,7 +3,7 @@ __author__ = 'Yorick Chollet'
 from timegateerror import TimegateError
 
 
-class DateRequestError(TimegateError):
+class DateTimeError(TimegateError):
 
     def __init__(self, msg, status=400):
-        super(DateRequestError, self).__init__(msg, status)
+        super(DateTimeError, self).__init__(msg, status)
