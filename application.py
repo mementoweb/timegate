@@ -9,7 +9,7 @@ from urlparse import urlparse
 from datetime import timedelta
 import logging
 
-from dateutil import parser as dateparser
+from dateutil.parser import parse as parse_datestr
 
 from conf.constants import HTTPRE, WWWRE, DATEFMT, URI_PARTS, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, LOG_FILE
 from errors.urierror import URIRequestError
@@ -17,14 +17,12 @@ from errors.dateerror import DateTimeError
 from errors.timegateerror import TimegateError
 from errors.handlererror import HandlerError
 
+# Initialization code
+# Logger configuration
+# logging.basicConfig(filename=LOG_FILE, filemode='w',
+#                     format=LOG_FMT, level=logging.INFO) # release
+logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.DEBUG) # DEBUG
 
-#TODO set level to info
-# Logger
-logging.basicConfig(filename=LOG_FILE, filemode='w',
-                    format=LOG_FMT, level=logging.DEBUG)
-
-
-# TODO define if trycatch needed for badly-implemented handlers
 # Builds the mapper from URI regular expression to handler class
 try:
     handlers_ct = 0
@@ -57,6 +55,7 @@ try:
 except Exception as e:
     logging.debug("Exception during handler loading.")
     raise Exception("Fatal Error loading handlers: %s" % e.message)
+
 
 def application(env, start_response):
     """
@@ -110,7 +109,7 @@ def application(env, start_response):
         return resperror(status, message, start_response, headers)
 
 
-def parsedt(datestr):
+def validate_datetime(datestr):
     """
     Parses the requested date string into a dateutil time object
     Raises DateTimeError if the parse fails to produce a datetime.
@@ -118,14 +117,14 @@ def parsedt(datestr):
     :return: the dateutil time object
     """
     try:
-        date = dateparser.parse(datestr)
+        date = parse_datestr(datestr)
         return date
     except Exception as e:
         raise DateTimeError("Error parsing 'Accept-Datetime: %s' \n"
                             "Message: %s" % (datestr, e.message))
 
 
-def parseuri(pathstr, methodstr):
+def validate_uri(pathstr, methodstr):
     """
     Parses the requested URI string.
     Raises URIRequestError if the parse fails to recognize a valid URI
@@ -150,6 +149,47 @@ def parseuri(pathstr, methodstr):
     except Exception as e:
         raise URIRequestError("Error: Cannot parse requested path '%s' \n"
                               "message: %s" % (pathstr, e.message))
+
+
+def validate_response(handler_response):
+    """
+    Controls and parses the response from the Handler. Also extracts URI-R if provided
+    as a tuple with the form (URI, None) in the list.
+    :param handler_response: Either None, a tuple (URI, date) or a list of (URI, date)
+    where one tuple can have 'None' date to indicate that this URI is the original resource's.
+    :return: A tuple (URI-R, Mementos) where Mementos is a (URI, date)-list of
+    all Mementos. In the response, and all URIs/dates are strings and are valid.
+    """
+
+    mementos = []
+
+    # Check if Empty or if tuple
+    if not handler_response:
+        return (None, None)
+    elif isinstance(handler_response, tuple):
+        handler_response = [handler_response]
+    elif not isinstance(handler_response, list):
+        raise Exception('handler_response must be either None, 2-Tuple or 2-Tuple array')
+
+    try:
+        url_r = None
+        for (url, date) in handler_response:
+            valid_urlstr = urlparse(url).geturl()
+            if date:
+                valid_datestr = parse_datestr(date).strftime(DATEFMT)
+                mementos.append((valid_urlstr, valid_datestr))
+            else:
+                #(url, None) represents the original resource
+                url_r = valid_urlstr
+
+        return (url_r, mementos)
+
+    except Exception as e:
+        raise HandlerError('Bad response from Handler:'
+                           'response must be either None, (url, date)-Tuple or'
+                           ' (url, date)-Tuple array, where '
+                           'url, date are with standards formats  %s'
+                           % e.message, 503)
 
 
 def resperror(status, message, start_response, headers):
@@ -221,12 +261,12 @@ def resptimemap(mementos, uri_r, start_response):
     mementos_links = []
     if mementos:
         first_url = mementos[0][0]
-        first_date = dateparser.parse(mementos[0][1])
+        first_date = parse_datestr(mementos[0][1])
         last_url = mementos[0][0]
-        last_date = dateparser.parse(mementos[0][1])
+        last_date = parse_datestr(mementos[0][1])
 
         for (urlstr, datestr) in mementos:
-            date = dateparser.parse(datestr)
+            date = parse_datestr(datestr)
             if date < first_date:
                 first_date = date
                 first_url = urlstr
@@ -303,51 +343,12 @@ def closest(timemap, accept_datetime):
     memento = None
 
     for (url, dt) in timemap:
-        diff = abs(accept_datetime - dateparser.parse(dt))
+        diff = abs(accept_datetime - parse_datestr(dt))
         if diff < delta:
             memento = url
             delta = diff
 
     return memento
-
-
-def parse_response(handler_response):
-    """
-    Controls and parses the response from the Handler. Also extracts URI-R if provided
-    as a tuple with the form (URI, None) in the list.
-    :param handler_response: Either None, a tuple (URI, date) or a list of (URI, date)
-    where one tuple can have 'None' date to indicate that this URI is the original resource's.
-    :return: A tuple (URI-R, Mementos) where Mementos is a (URI, date)-list of
-    all Mementos. In the response, and all URIs/dates are strings and are valid.
-    """
-
-    mementos = []
-
-    # Check if Empty or if tuple
-    if not handler_response:
-        return (None, None)
-    elif isinstance(handler_response, tuple):
-        handler_response = [handler_response]
-    elif not isinstance(handler_response, list):
-        raise Exception('handler_response must be either None, 2-Tuple or 2-Tuple array')
-
-    try:
-        for (url, date) in handler_response:
-            url_r = None
-            valid_urlstr = urlparse(url).geturl()
-            if date:
-                valid_datestr = dateparser.parse(date).strftime(DATEFMT)
-                mementos.append((valid_urlstr, valid_datestr))
-            else:
-                #(url, None) represents the original resource
-                url_r = valid_urlstr
-
-        return (url_r, mementos)
-
-    except Exception as e:
-        raise HandlerError('Bad response from Handler:'
-                           'response must be either None, (url, date)-Tuple or (url, date)-Tuple array, where '
-                           'url, date are with standards formats  %s' % e.message, 503)
 
 
 def timegate(req_path, start_response, req_datetime):
@@ -361,14 +362,14 @@ def timegate(req_path, start_response, req_datetime):
     """
 
     # Parses the date time and original resoure URI
-    accept_datetime = parsedt(req_datetime)
-    uri_r = parseuri(req_path, URI_PARTS['G'])
+    accept_datetime = validate_datetime(req_datetime)
+    uri_r = validate_uri(req_path, URI_PARTS['G'])
     # Dynamically loads the handler for that resource
     handler = loadhandler(uri_r, True)
     # Runs the handler's API request for the Memento
     req = handler.get(uri_r, accept_datetime)
     # Verifies and validates handler response
-    (uri, mementos) = parse_response(req)
+    (uri, mementos) = validate_response(req)
     # If the handler returned several Mementos, take the closest
     memento = closest(mementos, accept_datetime)
     # Generates the TimeGate response body and Headers
@@ -387,15 +388,15 @@ def timemap(req_path, start_response, req_datetime=None):
 
     # Parses the date time if it was provided. Parses the original resource URI
     if req_datetime:
-        accept_datetime = parsedt(req_datetime)
+        accept_datetime = validate_datetime(req_datetime)
     else:
         accept_datetime = None
-    uri_r = parseuri(req_path, URI_PARTS['T'])
+    uri_r = validate_uri(req_path, URI_PARTS['T'])
     # Dynamically loads the handler for that resource.
     handler = loadhandler(uri_r, False)
     # Runs the handler's API request for all Mementos
     req = handler.get(uri_r, accept_datetime)
     # Verifies and validates handler response
-    (uri, mementos) = parse_response(req)
+    (uri, mementos) = validate_response(req)
     # Generates the TimeMap response body and Headers
     return resptimemap(mementos, uri_r, start_response)
