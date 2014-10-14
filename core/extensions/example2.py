@@ -10,8 +10,8 @@ class OtherHandler(Handler):
 
     def __init__(self):
 
-        self.resources = ['http://www.an\d{1,2}.other.com/*',
-                          'http://www.another.com/*']
+        self.resources = ['http://www.an\d{1,2}.other.com/',
+                          'http://www.another.com/[a-zA-Z0-9]*/']
 
         self.singleonly = False
 

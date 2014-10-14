@@ -12,8 +12,8 @@ class ExampleHandler(Handler):
     def __init__(self):
 
         # Regular Expressions of original resources that the Handler manages
-        self.resources = ['https?://www.example.com/*',
-                             'https?://archive.example.com/resource/*']
+        self.resources = ['https?://www.example.com/',
+                          'https?://archive.example.com/resource/']
 
         # Boolean indicating if the handler can only request one Memento at a time
         self.singleonly = False

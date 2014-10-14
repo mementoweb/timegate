@@ -1,12 +1,13 @@
 __author__ = 'Yorick Chollet'
 
 import requests
-import dateutil
+import logging
 from errors.handlererror import HandlerError
 
 from conf.constants import PROXIES
 
 #TODO defeine what is imported where
+
 
 class Handler:
 
@@ -14,6 +15,10 @@ class Handler:
     resources = []
     # Boolean indicating if the handler can only request one Memento at a time
     singleonly = False
+
+    # Disables all 'requests' module event logs that are at least not WARNINGS
+    logging.getLogger('requests').setLevel(logging.WARNING)
+
 
     def __init__(self):
         raise NotImplementedError
@@ -37,6 +42,8 @@ class Handler:
         :return: A requests response object
         Raises HandlerError if the requests fails to access the API
         """
+
+        logging.info("Sending API request for %s" % host+resource)
         try:
             req = requests.get(host+resource)
             return req

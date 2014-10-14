@@ -7,19 +7,27 @@ import re
 import glob
 from urlparse import urlparse
 from datetime import timedelta
+import logging
 
 from dateutil import parser as dateparser
 
-from conf.constants import HTTPRE, WWWRE, DATEFMT, URI_PARTS, HTTP_STATUS, HOST, EXTENSIONS_PATH
+from conf.constants import HTTPRE, WWWRE, DATEFMT, URI_PARTS, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, LOG_FILE
 from errors.urierror import URIRequestError
 from errors.dateerror import DateTimeError
 from errors.timegateerror import TimegateError
 from errors.handlererror import HandlerError
 
 
+#TODO set level to info
+# Logger
+logging.basicConfig(filename=LOG_FILE, filemode='w',
+                    format=LOG_FMT, level=logging.DEBUG)
+
+
 # TODO define if trycatch needed for badly-implemented handlers
 # Builds the mapper from URI regular expression to handler class
 try:
+    handlers_ct = 0
     tgate_mapper = []
     tmap_mapper = []
     # Finds every python files in the extensions folder and imports it
@@ -38,15 +46,17 @@ try:
                 handler_class = getattr(module, classname)
                 # Extract all URI regular expressions that the handlers manages
                 handler = handler_class()
+                handlers_ct += 1
                 for regex in handler.resources:
                     # Compiles the regex and maps it to the handler python class
                     tgate_mapper.append((re.compile(regex), handler_class))
                     if not handler.singleonly:
                         tmap_mapper.append((re.compile(regex), handler_class))
-
+    logging.info("Loaded %d handlers for %d regular expressions URI." % (
+                 handlers_ct, len(tgate_mapper)))
 except Exception as e:
+    logging.debug("Exception during handler loading.")
     raise Exception("Fatal Error loading handlers: %s" % e.message)
-
 
 def application(env, start_response):
     """
@@ -57,37 +67,46 @@ def application(env, start_response):
     """
 
     # Extracting requested values
-    req_path = env.get("PATH_INFO", "/")
-    req_datetime = env.get("HTTP_ACCEPT_DATETIME")
+    req_path = env.get('PATH_INFO', '/')
+    req_datetime = env.get('HTTP_ACCEPT_DATETIME')
+    req_meth = env.get('REQUEST_METHOD')
+    logging.info("Incoming request: %s %s Accept-Datetime: %s" % (
+                 req_meth, req_path, req_datetime))
 
-    # Standard Headers
+    # Standard response header
     headers = [('Content-Type', 'text/html')]
 
-    # Processing request type and path
+    # Escaping all other than 'GET' requests:
+    if req_meth != 'GET':
+        status = 405
+        message = "Request method '%s' not allowed." % req_meth
+        return resperror(status, message, start_response, headers)
+
+    # Processing request service type and path
     req_path = req_path.lstrip('/')
     req_type = req_path.split('/', 1)[0]
 
-    # TimeGate Request
+    # Serving TimeGate Request
     if req_type == URI_PARTS['G']:
         try:
             return timegate(req_path, start_response, req_datetime)
         except TimegateError as e:
             return resperror(e.status, e.message,
-                                  start_response, headers)
+                             start_response, headers)
 
-    # TimeMap Request
+    # Serving TimeMap Request
     elif req_type == URI_PARTS['T']:
         try:
             return timemap(req_path, start_response, req_datetime)
         except TimegateError as e:
             return resperror(e.status, e.message,
-                                  start_response, headers)
+                             start_response, headers)
 
-    # Unknown Request
+    # Unknown Service Request
     else:
-        status = 404
-        message = "Service request type '%s' does not match '%s' or '%s'" % \
-                  (req_type, URI_PARTS['T'], URI_PARTS['G'])
+        status = 400
+        message = "Service request type '%s' does not match '%s' or '%s'" % (
+                  req_type, URI_PARTS['T'], URI_PARTS['G'])
         return resperror(status, message, start_response, headers)
 
 
@@ -103,7 +122,7 @@ def parsedt(datestr):
         return date
     except Exception as e:
         raise DateTimeError("Error parsing 'Accept-Datetime: %s' \n"
-                               "Message: %s" % (datestr, e.message))
+                            "Message: %s" % (datestr, e.message))
 
 
 def parseuri(pathstr, methodstr):
@@ -144,6 +163,7 @@ def resperror(status, message, start_response, headers):
     """
     body = ["%s \n %s \n" % (status, message)]
     start_response(HTTP_STATUS[status], headers)
+    logging.info("Returning %d Error: %s" % (status, message))
     return body
 
 
@@ -159,7 +179,8 @@ def respmemento(memento, uri_r, start_response, singleonly=False):
 
     linkheaderval = '<%s>; rel="original"' % uri_r.encode('utf8')
     if not singleonly:
-        linkheaderval += ', <%s/%s/%s>; rel="timemap"' % (HOST, URI_PARTS['T'], uri_r.encode('utf8'))
+        timemaplink = '%s/%s/%s' % (HOST, URI_PARTS['T'], uri_r.encode('utf8'))
+        linkheaderval += ', <%s>; rel="timemap"' % timemaplink
 
     status = 302
     headers = [
@@ -174,6 +195,8 @@ def respmemento(memento, uri_r, start_response, singleonly=False):
     # TODO put all normal headers in conf.constants
     body = []
     start_response(HTTP_STATUS[status], headers)
+    logging.info("Returning %d, Memento=%s for URI-R=%s" %
+                 (status, memento, uri_r))
     return body
 
 
@@ -188,8 +211,10 @@ def resptimemap(mementos, uri_r, start_response):
 
     # Adds Original, TimeGate and TimeMap links
     original_link = '<%s>; rel="original"' % uri_r.encode('utf8')
-    timefate_link = '<%s/%s/%s>; rel="timegate"' % (HOST, URI_PARTS['G'], uri_r.encode('utf8'))
-    self_link = '<%s/%s/%s>; rel="self"; type="application/link-format"' % (HOST, URI_PARTS['T'], uri_r.encode('utf8'))
+    timegate_link = '<%s/%s/%s>; rel="timegate"' % (
+        HOST, URI_PARTS['G'], uri_r.encode('utf8'))
+    self_link = '<%s/%s/%s>; rel="self"; type="application/link-format"' % (
+        HOST, URI_PARTS['T'], uri_r.encode('utf8'))
 
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
@@ -209,17 +234,21 @@ def resptimemap(mementos, uri_r, start_response):
                 last_date = date
                 last_url = urlstr
 
-            linkstr = '<%s>; rel="memento"; datetime="%s"' % (urlstr.encode('utf8'), datestr.encode('utf8'))
+            linkstr = '<%s>; rel="memento"; datetime="%s"' % (
+                urlstr.encode('utf8'), datestr.encode('utf8'))
             mementos_links.append(linkstr)
         first_datestr = first_date.strftime(DATEFMT).encode('utf8')
         last_datestr = last_date.strftime(DATEFMT).encode('utf8')
-        firstlink = '<%s>; rel="first memento"; datetime="%s"' % (first_url.encode('utf8'), first_datestr)
-        lastlink = '<%s>; rel="last memento"; datetime="%s"' % (last_url.encode('utf8'), last_datestr)
+        firstlink = '<%s>; rel="first memento"; datetime="%s"' % (
+            first_url.encode('utf8'), first_datestr)
+        lastlink = '<%s>; rel="last memento"; datetime="%s"' % (
+            last_url.encode('utf8'), last_datestr)
         mementos_links.insert(0, lastlink)
         mementos_links.insert(0, firstlink)
-        self_link = '%s; from="%s"; until="%s"' % (self_link, first_datestr, last_datestr)
+        self_link = '%s; from="%s"; until="%s"' % (
+            self_link, first_datestr, last_datestr)
     # Aggregates all link strings and constructs the TimeMap body
-    links = [original_link, timefate_link, self_link]
+    links = [original_link, timegate_link, self_link]
     links.extend(mementos_links)
     body = ',\n'.join(links) + '\n'
 
@@ -231,6 +260,8 @@ def resptimemap(mementos, uri_r, start_response):
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close')]
     start_response(HTTP_STATUS[status], headers)
+    logging.info("Returning %d, TimeMap of size %d for URI-R=%s" %
+                 (status, len(mementos), uri_r))
     return [body]
 
 
@@ -252,9 +283,12 @@ def loadhandler(uri, singlerequest=False):
     #TODO define what to do if multiple matches
     for (regex, handler) in mapper:
         if bool(regex.match(uri)):
+            logging.debug("%s matched pattern %s of handler %s" %
+                          (uri, regex.pattern, handler))
             return handler()
 
-    raise URIRequestError('Cannot find any %s handler for %s' % (method, uri), 404)
+    raise URIRequestError('Cannot find any %s handler for %s' %
+                          (method, uri), 404)
 
 
 def closest(timemap, accept_datetime):
