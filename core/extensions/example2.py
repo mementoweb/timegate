@@ -15,11 +15,11 @@ class OtherHandler(Handler):
 
         self.singleonly = False
 
-    def get(self, uri, datetime):
+    def getall(self, uri):
         api_uri = 'http://127.0.0.1:9001/timemap2/'
-        req = self.request(api_uri, uri)
+        req = self.request(uri, api_uri)
 
-        if not req or req.status_code == 404:
+        if req.status_code == 404:
             raise HandlerError("Cannot find resource on version server.", 404)
         elif req.status_code == 200:
             assert (req.headers['content-type'].startswith('application/json'))

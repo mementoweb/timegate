@@ -18,11 +18,10 @@ class ExampleHandler(Handler):
         # Boolean indicating if the handler can only request one Memento at a time
         self.singleonly = False
 
-    def get(self, uri, datetime=None):
+    def getall(self, uri):
         """
         Handler get method.
         :param uri: The original resource URI for which we need a Memento or a TimeMap
-        :param datetime: Optional datetime argument if the Handler wishes to choose the best itself.
         :return:
             - None if the handler does not find any Memento for the requested resource
             - (URI, Datetime) strings tuple if one Memento is returned (basic case for singleonly)
@@ -34,10 +33,10 @@ class ExampleHandler(Handler):
         # Example API URI
         api_uri = 'http://127.0.0.1:9001/timemap1/'
         # Requests the API
-        response = self.request(api_uri, uri)
+        response = self.request(uri, api_uri)
 
         # Handles API Response
-        if not response or response.status_code == 404:
+        if response.status_code == 404:
             raise HandlerError("Cannot find resource on version server.", 404)
 
         elif response.status_code == 200:

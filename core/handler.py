@@ -23,18 +23,29 @@ class Handler:
     def __init__(self):
         raise NotImplementedError
 
-    def get(self, uri_r, datetime):
+    def getone(self, uri_r, datetime):
+        """
+        Requests one Memento for a resource and a datetime
+
+        :param uri_r: the generic URI of the resource
+        :param datetime: Optional datetime to target specific Mementos as a dateutil object
+        :return: 2-Array of tuples (URI, Datetime) where Datetime = None for the
+        original resource generic URI.
+        """
+        raise NotImplementedError
+
+    def getall(self, uri_r):
         """
         Requests the mementos for a resource.
 
         :param uri_r: the generic URI of the resource
-        :param datetime: Optional datetime to target specific Mementos as a dateutil object
         :return: Array of tuples (URI, Datetime) where Datetime = None for the
         original resource generic URI.
         """
         raise NotImplementedError
 
-    def request(self, host, resource):
+
+    def request(self, resource, host="", payload=None):
         """
         Handler helper function. Requests the resource at host.
         :param host: The hostname of the API
@@ -43,9 +54,14 @@ class Handler:
         Raises HandlerError if the requests fails to access the API
         """
 
-        logging.info("Sending API request for %s" % host+resource)
+        uri = host + resource
+
+        logging.info("Sending API request for %s" % uri)
         try:
-            req = requests.get(host+resource)
-            return req
+            req = requests.get(uri, params=payload)
         except Exception as e:
-            raise HandlerError("Cannot request version server (%s): %s" % (host + resource, e.message))
+            raise HandlerError("Cannot request version server (%s): %s" % (uri, e.message))
+
+        if not req:
+            raise HandlerError("Empty response from version server (%s)" % uri)
+        return req

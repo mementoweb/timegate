@@ -33,3 +33,6 @@ EXTENSIONS_PATH = 'core/extensions/'
 
 LOG_FMT = '%(asctime)s | %(levelname)s| %(message)s'
 LOG_FILE = 'log.txt'
+
+#TODO add decode('iso-8859-1')
+#TODO add timegate/timemap strings

@@ -26,7 +26,7 @@ logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.DEBUG) # DEBUG
 # Builds the mapper from URI regular expression to handler class
 try:
     handlers_ct = 0
-    tgate_mapper = []
+    tgate_mapper = [] #TODO merge those
     tmap_mapper = []
     # Finds every python files in the extensions folder and imports it
     files = glob.glob(EXTENSIONS_PATH+"*.py")
@@ -76,7 +76,7 @@ def application(env, start_response):
     headers = [('Content-Type', 'text/html')]
 
     # Escaping all other than 'GET' requests:
-    if req_meth != 'GET':
+    if req_meth != 'GET' and req_meth != 'HEAD':
         status = 405
         message = "Request method '%s' not allowed." % req_meth
         return resperror(status, message, start_response, headers)
@@ -96,7 +96,7 @@ def application(env, start_response):
     # Serving TimeMap Request
     elif req_type == URI_PARTS['T']:
         try:
-            return timemap(req_path, start_response, req_datetime)
+            return timemap(req_path, start_response)
         except TimegateError as e:
             return resperror(e.status, e.message,
                              start_response, headers)
@@ -215,21 +215,23 @@ def respmemento(memento, uri_r, start_response, singleonly=False):
     :return:
     """
 
-    #TODO encoding response as utf8
+    #TODO encoding response as utf8 ?!?
 
-    linkheaderval = '<%s>; rel="original"' % uri_r.encode('utf8')
+    linkheaderval = '<%s>; rel="original"' % uri_r
     if not singleonly:
-        timemaplink = '%s/%s/%s' % (HOST, URI_PARTS['T'], uri_r.encode('utf8'))
+        timemaplink = '%s/%s/%s' % (HOST, URI_PARTS['T'], uri_r)
         linkheaderval += ', <%s>; rel="timemap"' % timemaplink
+
+    linkheaderval = linkheaderval
 
     status = 302
     headers = [
-        ('Date', time.strftime(DATEFMT, time.gmtime())),
+        ('Date', time.strftime(DATEFMT, time.gmtime()).encode('utf8')),
         ('Vary', 'accept-datetime'),
         ('Content-Length', '0'),
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close'),
-        ('Location', memento.encode('utf8')),
+        ('Location', memento),
         ('Link', linkheaderval)
     ]
     # TODO put all normal headers in conf.constants
@@ -250,11 +252,11 @@ def resptimemap(mementos, uri_r, start_response):
     """
 
     # Adds Original, TimeGate and TimeMap links
-    original_link = '<%s>; rel="original"' % uri_r.encode('utf8')
+    original_link = '<%s>; rel="original"' % uri_r
     timegate_link = '<%s/%s/%s>; rel="timegate"' % (
-        HOST, URI_PARTS['G'], uri_r.encode('utf8'))
+        HOST, URI_PARTS['G'], uri_r)
     self_link = '<%s/%s/%s>; rel="self"; type="application/link-format"' % (
-        HOST, URI_PARTS['T'], uri_r.encode('utf8'))
+        HOST, URI_PARTS['T'], uri_r)
 
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
@@ -275,27 +277,27 @@ def resptimemap(mementos, uri_r, start_response):
                 last_url = urlstr
 
             linkstr = '<%s>; rel="memento"; datetime="%s"' % (
-                urlstr.encode('utf8'), datestr.encode('utf8'))
+                urlstr, datestr)
             mementos_links.append(linkstr)
-        first_datestr = first_date.strftime(DATEFMT).encode('utf8')
-        last_datestr = last_date.strftime(DATEFMT).encode('utf8')
+        first_datestr = first_date.strftime(DATEFMT)
+        last_datestr = last_date.strftime(DATEFMT)
         firstlink = '<%s>; rel="first memento"; datetime="%s"' % (
-            first_url.encode('utf8'), first_datestr)
+            first_url, first_datestr)
         lastlink = '<%s>; rel="last memento"; datetime="%s"' % (
-            last_url.encode('utf8'), last_datestr)
+            last_url, last_datestr)
         mementos_links.insert(0, lastlink)
         mementos_links.insert(0, firstlink)
         self_link = '%s; from="%s"; until="%s"' % (
             self_link, first_datestr, last_datestr)
     # Aggregates all link strings and constructs the TimeMap body
     links = [original_link, timegate_link, self_link]
-    links.extend(mementos_links)
+    links.extend(mementos_links) # TODO modularizer ca...
     body = ',\n'.join(links) + '\n'
 
     # Builds HTTP Response and WSGI return
     status = 200
     headers = [
-        ('Date', time.strftime(DATEFMT, time.gmtime())),
+        ('Date', time.strftime(DATEFMT, time.gmtime()).encode('utf8')),
         ('Content-Length', str(len(body))),
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close')]
@@ -361,13 +363,18 @@ def timegate(req_path, start_response, req_datetime):
     :return: The body of the HTTP response
     """
 
+    #TODO define how TimeMap/TimeGate Single/all
+
     # Parses the date time and original resoure URI
     accept_datetime = validate_datetime(req_datetime)
     uri_r = validate_uri(req_path, URI_PARTS['G'])
     # Dynamically loads the handler for that resource
     handler = loadhandler(uri_r, True)
     # Runs the handler's API request for the Memento
-    req = handler.get(uri_r, accept_datetime)
+    if handler.singleonly: #TODO comment this
+        req = handler.getone(uri_r, accept_datetime)
+    else:
+        req = handler.getall(uri_r)
     # Verifies and validates handler response
     (uri, mementos) = validate_response(req)
     # If the handler returned several Mementos, take the closest
@@ -375,7 +382,7 @@ def timegate(req_path, start_response, req_datetime):
     # Generates the TimeGate response body and Headers
     return respmemento(memento, uri_r, start_response, handler.singleonly)
 
-def timemap(req_path, start_response, req_datetime=None):
+def timemap(req_path, start_response):
     """
     Handles TimeMap high-level logic. Fetches all Mementos for an Original
     Resource and builds the TimeMap response. Returns a HTTP 200 response if it
@@ -385,17 +392,11 @@ def timemap(req_path, start_response, req_datetime=None):
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
-
-    # Parses the date time if it was provided. Parses the original resource URI
-    if req_datetime:
-        accept_datetime = validate_datetime(req_datetime)
-    else:
-        accept_datetime = None
     uri_r = validate_uri(req_path, URI_PARTS['T'])
     # Dynamically loads the handler for that resource.
     handler = loadhandler(uri_r, False)
     # Runs the handler's API request for all Mementos
-    req = handler.get(uri_r, accept_datetime)
+    req = handler.getall(uri_r)
     # Verifies and validates handler response
     (uri, mementos) = validate_response(req)
     # Generates the TimeMap response body and Headers
