@@ -45,7 +45,7 @@ class Handler:
         raise NotImplementedError
 
 
-    def request(self, resource, host="", payload=None):
+    def request(self, resource, host="", **kwargs):
         """
         Handler helper function. Requests the resource at host.
         :param host: The hostname of the API
@@ -56,12 +56,12 @@ class Handler:
 
         uri = host + resource
 
-        logging.info("Sending API request for %s" % uri)
+        logging.info("Sending API request for %s" % (uri))
         try:
-            req = requests.get(uri, params=payload)
+            req = requests.get(uri, **kwargs)
         except Exception as e:
             raise HandlerError("Cannot request version server (%s): %s" % (uri, e.message))
 
-        if not req:
-            raise HandlerError("Empty response from version server (%s)" % uri)
+        if req is None:
+            raise HandlerError("Error requesting version server (%s)" % uri)
         return req

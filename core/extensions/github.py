@@ -53,7 +53,7 @@ class WikiHandler(Handler):
             newparams = params.copy()
             # Modify it with the values returned in the 'continue' section of the last result.
             newparams.update(cont)
-            req = self.request(apibase, params=newparams)
+            req = self.request(apibase, payload=newparams)
             if req.status_code == 404:
                 raise HandlerError("Cannot find resource on version server.", 404)
             result = req.json()
@@ -65,10 +65,10 @@ class WikiHandler(Handler):
                 # The request was successful
                 pid = result['query']['pageids'][0]  # the JSON key of the page
                 queries_results += result['query']['pages'][pid]['revisions']
-            if 'continue' in result:
+            if 'query-continue' in result:
                 # The response was truncated, the rest can be obtained using
                 # &rvcontinue=ID
-                cont = result['continue']
+                cont = result['query-continue']['revisions']
             else:
                 cont = None
 
