@@ -6,17 +6,21 @@ __author__ = 'Yorick Chollet'
 from core.handler import Handler
 from errors.handlererror import HandlerError
 
-class WikiHandler(Handler):
+class GitHubHandler(Handler):
 
 
     def __init__(self):
         # Mandatory fields
-        self.resources = ['https?://[a-z]{2,3}.wikipedia.org/wiki/.+']
+        self.resources = ['https://github.com/.+']
         self.singleonly = False
 
         # Local fields, the uri pattern of a resource
-        uri_re = '(.+)(/wiki/)(.+)'
-        self.rex = re.compile(uri_re)
+        # Here protocol, url, user, repo
+        uri_re = '(https://)(github.com/)(.+/)(.+)'
+        self.uri_rex = re.compile(uri_re)
+
+        link_header_re = '<(.+?)>; rel="next"'
+        self.header_rex = re.compile(link_header_re)
 
 
     # This example requires the datetime
@@ -27,57 +31,53 @@ class WikiHandler(Handler):
 
     # This example requires the datetime
     def getall(self, uri):
-        match = self.rex.match(uri)
+        match = self.uri_rex.match(uri)
         assert bool(match)
 
-        base = match.groups()[0]
-        resource = match.groups()[2]  # Note that anchors can be included
+        # URI deconstruction
+        protocol = match.groups()[0]
+        base = match.groups()[1]
+        user = match.groups()[2]
+        repo = match.groups()[3]
 
-        # Mediawiki API parameters
-        apibase = base+'/w/api.php'
+        # GitHub API parameters
+        apibase = protocol+'api.'+base+'repos/'+user+repo+'/commits'
         params = {
-            'action': 'query',
-            'format': 'json',
-            'prop': 'revisions',
-            'rvprop': 'ids|timestamp',
-            'rvlimit': 500,  # Max allowed is 500
-            'indexpageids': '',
-            'titles': resource
+            'per_page': 100,  # Max allowed is 100
         }
-        cont = {'continue': ''}  # The initial continue value is empty
+        auth=('MementoTimegate', 'LANLTimeGate14')
+        cont = apibase  # Do not know if continue
 
         # Does sequential queries to get all revisions IDs and Timestamps
         queries_results = []
         while cont is not None:
-            # Clone original request
-            newparams = params.copy()
-            # Modify it with the values returned in the 'continue' section of the last result.
-            newparams.update(cont)
-            req = self.request(apibase, payload=newparams)
+            req = self.request(cont, params=params, auth=auth)
             if req.status_code == 404:
                 raise HandlerError("Cannot find resource on version server.", 404)
             result = req.json()
-            if 'error' in result:
-                raise HandlerError(result['error'])
-            if 'warnings' in result:
-                logging.warn(result['warnings'])
-            if 'query' in result:
+            if 'message' in result:
+                raise HandlerError(result['message'])
+            if 'errors' in result:
+                raise HandlerError(result['errors'])
+            if len(result) > 0:
                 # The request was successful
-                pid = result['query']['pageids'][0]  # the JSON key of the page
-                queries_results += result['query']['pages'][pid]['revisions']
-            if 'query-continue' in result:
-                # The response was truncated, the rest can be obtained using
-                # &rvcontinue=ID
-                cont = result['query-continue']['revisions']
-            else:
-                cont = None
+                queries_results += result
+                # Search for possible continue
+                if 'link' in req.headers:
+                    link_header = req.headers['link']
+                    headermatch = self.header_rex.search(link_header)
+                    if bool(headermatch):
+                        # The response was truncated, the rest can be obtained using
+                        # the given "next" link
+                        cont = headermatch.groups()[0]
+                    else:
+                        cont = None
+                else:
+                    cont = None
 
-        # Processing list
-        def f(rev):
-            rev_uri = base + '/w/index.php?title=%s&oldid=%d' % (
-                resource, rev['revid'])
-            dt = rev['timestamp']
-            return (rev_uri, dt)
+        # Processing list item
+        def f(commit):
+            return (commit['url'], commit['commit']['committer']['date'])
 
         return map(f, queries_results)
 

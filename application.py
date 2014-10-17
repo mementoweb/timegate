@@ -174,9 +174,9 @@ def validate_response(handler_response):
     try:
         url_r = None
         for (url, date) in handler_response:
-            valid_urlstr = urlparse(url).geturl()
+            valid_urlstr = str(urlparse(url).geturl())
             if date:
-                valid_datestr = parse_datestr(date).strftime(DATEFMT)
+                valid_datestr = str(parse_datestr(date).strftime(DATEFMT))
                 mementos.append((valid_urlstr, valid_datestr))
             else:
                 #(url, None) represents the original resource
@@ -250,6 +250,8 @@ def resptimemap(mementos, uri_r, start_response):
     :param start_response: WSGI callback function
     :return: The timemap body as a list of one element
     """
+
+    print "\n\n mementos: %s \n\n" %mementos
 
     # Adds Original, TimeGate and TimeMap links
     original_link = '<%s>; rel="original"' % uri_r
