@@ -251,8 +251,6 @@ def resptimemap(mementos, uri_r, start_response):
     :return: The timemap body as a list of one element
     """
 
-    print "\n\n mementos: %s \n\n" %mementos
-
     # Adds Original, TimeGate and TimeMap links
     original_link = '<%s>; rel="original"' % uri_r
     timegate_link = '<%s/%s/%s>; rel="timegate"' % (
