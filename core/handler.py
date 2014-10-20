@@ -56,7 +56,7 @@ class Handler:
 
         uri = host + resource
 
-        logging.info("Sending API request for %s" % (uri))
+        logging.info("Sending API request for %s, params=%s" % (uri, kwargs))
         try:
             req = requests.get(uri, **kwargs)
         except Exception as e:

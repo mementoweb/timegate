@@ -11,27 +11,26 @@ class GitHubHandler(Handler):
 
     def __init__(self):
         # Mandatory fields
-        self.resources = ['https://github.com/.+']
+        self.resources = ['https://github.com/.+',
+                          'https://raw.githubusercontent.com/']
         self.singleonly = False
 
-        # Local fields, the uri pattern of a resource
-        # Here protocol, url, user, repo
-        uri_re = '(https://)(github.com/)(.+/)(.+)'
-        self.uri_rex = re.compile(uri_re)
+        # Local fields
+        self.api = 'https://api.github.com'
 
-        link_header_re = '<(.+?)>; rel="next"'
-        self.header_rex = re.compile(link_header_re)
+        # Precompiles regular expressions
+        self.rex = re.compile("""
+                              (https://)  # protocol
+                              ((?:raw.githubusercontent|github).com/)  # base
+                              ([^/]+)/  # user
+                              ([^/]+)  # repo
+                              (/.+)?  # optional path
+                              """, re.X)
+        self.header_rex = re.compile('<(.+?)>; rel="next"')
+        self.file_rex = re.compile('(/blob)?/master')
 
-
-    # This example requires the datetime
-    def getone(self, uri, datetime):
-        # TODO this to lower the API requests
-        raise NotImplementedError
-
-
-    # This example requires the datetime
     def getall(self, uri):
-        match = self.uri_rex.match(uri)
+        match = self.rex.match(uri)
         assert bool(match)
 
         # URI deconstruction
@@ -39,26 +38,74 @@ class GitHubHandler(Handler):
         base = match.groups()[1]
         user = match.groups()[2]
         repo = match.groups()[3]
+        req_path = match.groups()[4]
 
         # GitHub API parameters
-        apibase = protocol+'api.'+base+'repos/'+user+repo+'/commits'
+        # Todo get commit url from api page...
+
+        # Defining Resource type and response handling
+        if req_path is None or req_path.startswith('/tree/master'):
+            if req_path:
+                path = req_path.replace('/tree/master', '', 1)
+            else:
+                path = '/'
+
+            # Resource is a directory
+            def repo_tupler(commit):
+                return (commit['html_url']+'?path='+path,
+                        commit['commit']['committer']['date'])
+
+            mapper = repo_tupler
+
+        elif bool(self.file_rex.match(req_path)):
+                # Resource is a file
+                path = req_path.replace('/blob', '', 1).replace('/master', '', 1)
+
+                def file_tupler(commit):
+                    if base == 'github.com/':
+                        # HTML Resource
+                        memento_path = '/blob/%s%s' % (
+                            commit['sha'], path)
+                    else:
+                        # Raw Resource
+                        memento_path = '/%s%s' % (
+                            commit['sha'], path)
+
+                    uri_m = '%s%s%s/%s%s' % (
+                        protocol, base, user, repo, memento_path)
+                    return (uri_m, commit['commit']['committer']['date'])
+
+                mapper = file_tupler
+
+        else:
+            # The resource is neither a file nor a directory.
+            raise HandlerError("GitHub resource type not found.", 404)
+
+        # Initiating request variables
+        apibase = '%s/repos/%s/%s/commits' % (self.api, user, repo)
         params = {
             'per_page': 100,  # Max allowed is 100
+            'path': str(path)
         }
-        auth=('MementoTimegate', 'LANLTimeGate14')
-        cont = apibase  # Do not know if continue
+        auth = ('MementoTimegate', 'LANLTimeGate14')
+        cont = apibase  # The first continue is the beginning
 
-        # Does sequential queries to get all revisions IDs and Timestamps
+        # Does sequential queries to get all commits of the particular resource
         queries_results = []
         while cont is not None:
             req = self.request(cont, params=params, auth=auth)
-            if req.status_code == 404:
+            cont = None
+            if not req:
+                # status code different than 2XX
                 raise HandlerError("Cannot find resource on version server.", 404)
             result = req.json()
             if 'message' in result:
+                # API-specific error
                 raise HandlerError(result['message'])
             if 'errors' in result:
+                # API-specific error
                 raise HandlerError(result['errors'])
+            print req
             if len(result) > 0:
                 # The request was successful
                 queries_results += result
@@ -70,15 +117,16 @@ class GitHubHandler(Handler):
                         # The response was truncated, the rest can be obtained using
                         # the given "next" link
                         cont = headermatch.groups()[0]
-                    else:
-                        cont = None
-                else:
-                    cont = None
 
-        # Processing list item
-        def f(commit):
-            return (commit['url'], commit['commit']['committer']['date'])
+        if queries_results:
+            # Processes results based on resource type
+            return map(mapper, queries_results)
+        else:
+            # No results found
+            raise HandlerError("Resource not found", 404)
 
-        return map(f, queries_results)
+    # This example requires the datetime
+    def getone(self, uri, datetime):
+        # TODO this to lower the API requests
+        raise NotImplementedError
 
-        #TODO API response if undefined.
