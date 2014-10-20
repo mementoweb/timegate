@@ -34,5 +34,7 @@ EXTENSIONS_PATH = 'core/extensions/'
 LOG_FMT = '%(asctime)s | %(levelname)s| %(message)s'
 LOG_FILE = 'log.txt'
 
+STRICT_TIME = True  # If the time MUST follow DATEFMT
+
 #TODO add decode('iso-8859-1')
 #TODO add timegate/timemap strings

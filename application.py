@@ -2,16 +2,17 @@ __author__ = 'Yorick Chollet'
 
 import importlib
 import inspect
-import time
+from time import strftime, gmtime
+import datetime
 import re
 import glob
 from urlparse import urlparse
-from datetime import timedelta
 import logging
 
 from dateutil.parser import parse as parse_datestr
+from dateutil.tz import tzutc
 
-from conf.constants import HTTPRE, WWWRE, DATEFMT, URI_PARTS, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, LOG_FILE
+from conf.constants import HTTPRE, WWWRE, DATEFMT, URI_PARTS, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, LOG_FILE, STRICT_TIME
 from errors.urierror import URIRequestError
 from errors.dateerror import DateTimeError
 from errors.timegateerror import TimegateError
@@ -109,7 +110,7 @@ def application(env, start_response):
         return resperror(status, message, start_response, headers)
 
 
-def validate_datetime(datestr):
+def validate_datetime(datestr, strict=True):
     """
     Parses the requested date string into a dateutil time object
     Raises DateTimeError if the parse fails to produce a datetime.
@@ -117,7 +118,11 @@ def validate_datetime(datestr):
     :return: the dateutil time object
     """
     try:
-        date = parse_datestr(datestr)
+        if strict:
+            date = datetime.strptime(datestr, DATEFMT)
+        else:
+            date = parse_datestr(datestr, fuzzy=True).replace(tzinfo=tzutc())
+        logging.debug("Accept datetime parsed to: "+date.strftime(DATEFMT))
         return date
     except Exception as e:
         raise DateTimeError("Error parsing 'Accept-Datetime: %s' \n"
@@ -226,7 +231,7 @@ def respmemento(memento, uri_r, start_response, singleonly=False):
 
     status = 302
     headers = [
-        ('Date', time.strftime(DATEFMT, time.gmtime()).encode('utf8')),
+        ('Date', strftime(DATEFMT, gmtime()).encode('utf8')),
         ('Vary', 'accept-datetime'),
         ('Content-Length', '0'),
         ('Content-Type', 'text/plain; charset=UTF-8'),
@@ -297,7 +302,7 @@ def resptimemap(mementos, uri_r, start_response):
     # Builds HTTP Response and WSGI return
     status = 200
     headers = [
-        ('Date', time.strftime(DATEFMT, time.gmtime()).encode('utf8')),
+        ('Date', strftime(DATEFMT, gmtime()).encode('utf8')),
         ('Content-Length', str(len(body))),
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close')]
@@ -341,7 +346,7 @@ def closest(timemap, accept_datetime):
     :return:
     """
 
-    delta = timedelta.max
+    delta = datetime.timedelta.max
     memento = None
 
     for (url, dt) in timemap:
@@ -366,7 +371,7 @@ def timegate(req_path, start_response, req_datetime):
     #TODO define how TimeMap/TimeGate Single/all
 
     # Parses the date time and original resoure URI
-    accept_datetime = validate_datetime(req_datetime)
+    accept_datetime = validate_datetime(req_datetime, STRICT_TIME)
     uri_r = validate_uri(req_path, URI_PARTS['G'])
     # Dynamically loads the handler for that resource
     handler = loadhandler(uri_r, True)
