@@ -12,17 +12,20 @@ import logging
 from dateutil.parser import parse as parse_datestr
 from dateutil.tz import tzutc
 
-from conf.constants import HTTPRE, WWWRE, DATEFMT, URI_PARTS, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, LOG_FILE, STRICT_TIME
+from conf.constants import HTTPRE, WWWRE, DATEFMT, USE_CACHE, TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, LOG_FILE, STRICT_TIME, BEST
 from errors.urierror import URIRequestError
 from errors.dateerror import DateTimeError
 from errors.timegateerror import TimegateError
 from errors.handlererror import HandlerError
+from core.cache import Cache
 
 # Initialization code
 # Logger configuration
 # logging.basicConfig(filename=LOG_FILE, filemode='w',
 #                     format=LOG_FMT, level=logging.INFO) # release
 logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.DEBUG) # DEBUG
+
+# TODO define request url, define if JSON/XML allowed?
 
 # Builds the mapper from URI regular expression to handler class
 try:
@@ -58,6 +61,7 @@ except Exception as e:
     raise Exception("Fatal Error loading handlers: %s" % e.message)
 
 
+
 def application(env, start_response):
     """
     WSGI application object.
@@ -87,7 +91,7 @@ def application(env, start_response):
     req_type = req_path.split('/', 1)[0]
 
     # Serving TimeGate Request
-    if req_type == URI_PARTS['G']:
+    if req_type == TIMEGATESTR:
         try:
             return timegate(req_path, start_response, req_datetime)
         except TimegateError as e:
@@ -95,7 +99,7 @@ def application(env, start_response):
                              start_response, headers)
 
     # Serving TimeMap Request
-    elif req_type == URI_PARTS['T']:
+    elif req_type == TIMEMAPSTR:
         try:
             return timemap(req_path, start_response)
         except TimegateError as e:
@@ -224,7 +228,7 @@ def respmemento(memento, uri_r, start_response, singleonly=False):
 
     linkheaderval = '<%s>; rel="original"' % uri_r
     if not singleonly:
-        timemaplink = '%s/%s/%s' % (HOST, URI_PARTS['T'], uri_r)
+        timemaplink = '%s/%s/%s' % (HOST, TIMEMAPSTR, uri_r)
         linkheaderval += ', <%s>; rel="timemap"' % timemaplink
 
     linkheaderval = linkheaderval
@@ -259,9 +263,9 @@ def resptimemap(mementos, uri_r, start_response):
     # Adds Original, TimeGate and TimeMap links
     original_link = '<%s>; rel="original"' % uri_r
     timegate_link = '<%s/%s/%s>; rel="timegate"' % (
-        HOST, URI_PARTS['G'], uri_r)
+        HOST, TIMEGATESTR, uri_r)
     self_link = '<%s/%s/%s>; rel="self"; type="application/link-format"' % (
-        HOST, URI_PARTS['T'], uri_r)
+        HOST, TIMEMAPSTR, uri_r)
 
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
@@ -372,7 +376,7 @@ def timegate(req_path, start_response, req_datetime):
 
     # Parses the date time and original resoure URI
     accept_datetime = validate_datetime(req_datetime, STRICT_TIME)
-    uri_r = validate_uri(req_path, URI_PARTS['G'])
+    uri_r = validate_uri(req_path, TIMEGATESTR)
     # Dynamically loads the handler for that resource
     handler = loadhandler(uri_r, True)
     # Runs the handler's API request for the Memento
@@ -383,7 +387,7 @@ def timegate(req_path, start_response, req_datetime):
     # Verifies and validates handler response
     (uri, mementos) = validate_response(req)
     # If the handler returned several Mementos, take the closest
-    memento = closest(mementos, accept_datetime)
+    memento = locals[BEST](mementos, accept_datetime)
     # Generates the TimeGate response body and Headers
     return respmemento(memento, uri_r, start_response, handler.singleonly)
 
@@ -397,7 +401,7 @@ def timemap(req_path, start_response):
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
-    uri_r = validate_uri(req_path, URI_PARTS['T'])
+    uri_r = validate_uri(req_path, TIMEMAPSTR)
     # Dynamically loads the handler for that resource.
     handler = loadhandler(uri_r, False)
     # Runs the handler's API request for all Mementos

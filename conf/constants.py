@@ -2,7 +2,7 @@ __author__ = 'Yorick Chollet'
 
 import re
 
-#TODO move to constants
+#TODO split constants and config
 
 HTTP_STATUS = {
     200: "200 OK",
@@ -13,10 +13,8 @@ HTTP_STATUS = {
     503: "503 Service Unavailable"
 }
 
-URI_PARTS = {
-    'G': 'timegate',
-    'T': 'timemap'
-}
+TIMEMAPSTR = 'timemap'
+TIMEGATESTR = 'timegate'
 
 #TODO remove
 PROXIES = {'http': 'http://blueone.lanl.gov:8080',
@@ -36,5 +34,10 @@ LOG_FILE = 'log.txt'
 
 STRICT_TIME = True  # If the time MUST follow DATEFMT
 
+BEST = 'closest'
+
+USE_CACHE = True # dogpile
+
 #TODO add decode('iso-8859-1')
 #TODO add timegate/timemap strings
+#TODO def max timemap size for security

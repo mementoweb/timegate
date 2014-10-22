@@ -2,7 +2,7 @@
 import time
 
 from application import application as serv
-from conf.constants import URI_PARTS as URI
+from conf.constants import TIMEMAPSTR, TIMEGATESTR
 from conf.constants import DATEFMT
 
 from test.apistub import application as apistub
@@ -24,35 +24,35 @@ class TestServerSequence(unittest.TestCase):
         assert len(response.normal_body) > 1
 
     def test_server_tgroot_status(self):
-        response = server.get('/%s/' % URI['G'], status=400)
+        response = server.get('/%s/' % TIMEGATESTR, status=400)
 
     def test_server_tmroot_status(self):
-        response = server.get('/%s/' % URI['T'], status=400)
+        response = server.get('/%s/' % TIMEMAPSTR, status=400)
 
     def test_dateOK(self):
         timestr = time.strftime(DATEFMT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/uri' % URI['G'], headers=ad, status=200)
+        response = server.get('/%s/uri' % TIMEGATESTR, headers=ad, status=200)
 
     def test_dateWRONG(self):
         timestr = time.strftime("å/ンページ/ %s /הצלת", time.gmtime())
         ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/uri' % URI['G'], headers=ad, status=400)
+        response = server.get('/%s/uri' % TIMEGATESTR, headers=ad, status=400)
 
     def test_urlOK(self):
         timestr = time.strftime(DATEFMT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/http://www.example.com/resource/' % URI['G'], headers=ad, status=200)
+        response = server.get('/%s/http://www.example.com/resource/' % TIMEGATESTR, headers=ad, status=200)
 
     def test_urlTRUNKATED(self):
         timestr = time.strftime(DATEFMT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/example.com/resource' % URI['G'], headers=ad, status=200)
+        response = server.get('/%s/example.com/resource' % TIMEGATESTR, headers=ad, status=200)
 
     def test_urlINEXISTANT(self):
         timestr = time.strftime(DATEFMT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/http://www.wrong.url/' % URI['G'], headers=ad, status=200)
+        response = server.get('/%s/http://www.wrong.url/' % TIMEGATESTR, headers=ad, status=200)
 
     def test_urlUNSAFE(self):
         timestr = time.strftime(DATEFMT, time.gmtime())
