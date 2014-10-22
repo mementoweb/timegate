@@ -32,7 +32,7 @@ EXTENSIONS_PATH = 'core/extensions/'
 LOG_FMT = '%(asctime)s | %(levelname)s| %(message)s'
 LOG_FILE = 'log.txt'
 
-STRICT_TIME = True  # If the time MUST follow DATEFMT
+STRICT_TIME = False  # If the time MUST follow DATEFMT
 
 BEST = 'closest'
 

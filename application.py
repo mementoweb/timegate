@@ -2,21 +2,16 @@ __author__ = 'Yorick Chollet'
 
 import importlib
 import inspect
-from time import strftime, gmtime
-import datetime
 import re
 import glob
-from urlparse import urlparse
 import logging
 
-from dateutil.parser import parse as parse_datestr
-from dateutil.tz import tzutc
+import tgutils
 
-from conf.constants import HTTPRE, WWWRE, DATEFMT, USE_CACHE, TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, LOG_FILE, STRICT_TIME, BEST
+
+from conf.constants import DATEFMT, USE_CACHE, TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, LOG_FILE, STRICT_TIME, BEST
 from errors.urierror import URIRequestError
-from errors.dateerror import DateTimeError
 from errors.timegateerror import TimegateError
-from errors.handlererror import HandlerError
 from core.cache import Cache
 
 # Initialization code
@@ -60,6 +55,11 @@ except Exception as e:
     logging.debug("Exception during handler loading.")
     raise Exception("Fatal Error loading handlers: %s" % e.message)
 
+
+try:
+    cache = Cache(tolerance=3600, enabled=USE_CACHE) # TODO const
+except Exception as e:
+    raise Exception("Fatal Error loading cache: %s" % e.message)
 
 
 def application(env, start_response):
@@ -110,96 +110,8 @@ def application(env, start_response):
     else:
         status = 400
         message = "Service request type '%s' does not match '%s' or '%s'" % (
-                  req_type, URI_PARTS['T'], URI_PARTS['G'])
+                  req_type, TIMEMAPSTR, TIMEGATESTR)
         return resperror(status, message, start_response, headers)
-
-
-def validate_datetime(datestr, strict=True):
-    """
-    Parses the requested date string into a dateutil time object
-    Raises DateTimeError if the parse fails to produce a datetime.
-    :param datestr: A date string, in a common format.
-    :return: the dateutil time object
-    """
-    try:
-        if strict:
-            date = datetime.strptime(datestr, DATEFMT)
-        else:
-            date = parse_datestr(datestr, fuzzy=True).replace(tzinfo=tzutc())
-        logging.debug("Accept datetime parsed to: "+date.strftime(DATEFMT))
-        return date
-    except Exception as e:
-        raise DateTimeError("Error parsing 'Accept-Datetime: %s' \n"
-                            "Message: %s" % (datestr, e.message))
-
-
-def validate_uri(pathstr, methodstr):
-    """
-    Parses the requested URI string.
-    Raises URIRequestError if the parse fails to recognize a valid URI
-    :param urlstr: A URI string, in a common format.
-    :return: the URI string object
-    """
-
-    print pathstr
-
-    try:
-        #removes leading 'method/' and replaces whitespaces
-        path = pathstr[len(methodstr+'/'):].replace(' ', '%20')
-
-        # Trying to fix incomplete URI
-        if not bool(HTTPRE.match(path)):
-            if not bool(WWWRE.match(path)):
-                path = 'www.'+path
-            path = 'http://'+path
-
-        parsed = urlparse(path, scheme='http')
-        return parsed.geturl()
-    except Exception as e:
-        raise URIRequestError("Error: Cannot parse requested path '%s' \n"
-                              "message: %s" % (pathstr, e.message))
-
-
-def validate_response(handler_response):
-    """
-    Controls and parses the response from the Handler. Also extracts URI-R if provided
-    as a tuple with the form (URI, None) in the list.
-    :param handler_response: Either None, a tuple (URI, date) or a list of (URI, date)
-    where one tuple can have 'None' date to indicate that this URI is the original resource's.
-    :return: A tuple (URI-R, Mementos) where Mementos is a (URI, date)-list of
-    all Mementos. In the response, and all URIs/dates are strings and are valid.
-    """
-
-    mementos = []
-
-    # Check if Empty or if tuple
-    if not handler_response:
-        return (None, None)
-    elif isinstance(handler_response, tuple):
-        handler_response = [handler_response]
-    elif not isinstance(handler_response, list):
-        raise Exception('handler_response must be either None, 2-Tuple or 2-Tuple array')
-
-    try:
-        url_r = None
-        for (url, date) in handler_response:
-            valid_urlstr = str(urlparse(url).geturl())
-            if date:
-                valid_datestr = str(parse_datestr(date).strftime(DATEFMT))
-                mementos.append((valid_urlstr, valid_datestr))
-            else:
-                #(url, None) represents the original resource
-                url_r = valid_urlstr
-
-        return (url_r, mementos)
-
-    except Exception as e:
-        raise HandlerError('Bad response from Handler:'
-                           'response must be either None, (url, date)-Tuple or'
-                           ' (url, date)-Tuple array, where '
-                           'url, date are with standards formats  %s'
-                           % e.message, 503)
-
 
 def resperror(status, message, start_response, headers):
     """
@@ -235,7 +147,7 @@ def respmemento(memento, uri_r, start_response, singleonly=False):
 
     status = 302
     headers = [
-        ('Date', strftime(DATEFMT, gmtime()).encode('utf8')),
+        ('Date', tgutils.nowstr()), # TODO check timezone
         ('Vary', 'accept-datetime'),
         ('Content-Length', '0'),
         ('Content-Type', 'text/plain; charset=UTF-8'),
@@ -272,12 +184,12 @@ def resptimemap(mementos, uri_r, start_response):
     mementos_links = []
     if mementos:
         first_url = mementos[0][0]
-        first_date = parse_datestr(mementos[0][1])
+        first_date = tgutils.parse_date(mementos[0][1])
         last_url = mementos[0][0]
-        last_date = parse_datestr(mementos[0][1])
+        last_date = tgutils.parse_date(mementos[0][1])
 
         for (urlstr, datestr) in mementos:
-            date = parse_datestr(datestr)
+            date = tgutils.parse_date(datestr)
             if date < first_date:
                 first_date = date
                 first_url = urlstr
@@ -306,7 +218,7 @@ def resptimemap(mementos, uri_r, start_response):
     # Builds HTTP Response and WSGI return
     status = 200
     headers = [
-        ('Date', strftime(DATEFMT, gmtime()).encode('utf8')),
+        ('Date', tgutils.nowstr()), # TODO check timezone
         ('Content-Length', str(len(body))),
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close')]
@@ -342,26 +254,6 @@ def loadhandler(uri, singlerequest=False):
                           (method, uri), 404)
 
 
-def closest(timemap, accept_datetime):
-    """
-    Finds the chronologically closest memento
-    :param timemap:
-    :param accept_datetime: the time object
-    :return:
-    """
-
-    delta = datetime.timedelta.max
-    memento = None
-
-    for (url, dt) in timemap:
-        diff = abs(accept_datetime - parse_datestr(dt))
-        if diff < delta:
-            memento = url
-            delta = diff
-
-    return memento
-
-
 def timegate(req_path, start_response, req_datetime):
     """
     Handles timegate high-level logic. Fetch the Memento for the requested URI
@@ -375,19 +267,19 @@ def timegate(req_path, start_response, req_datetime):
     #TODO define how TimeMap/TimeGate Single/all
 
     # Parses the date time and original resoure URI
-    accept_datetime = validate_datetime(req_datetime, STRICT_TIME)
-    uri_r = validate_uri(req_path, TIMEGATESTR)
+    accept_datetime = tgutils.validate_req_datetime(req_datetime, STRICT_TIME)
+    uri_r = tgutils.validate_req_uri(req_path, TIMEGATESTR)
     # Dynamically loads the handler for that resource
     handler = loadhandler(uri_r, True)
     # Runs the handler's API request for the Memento
     if handler.singleonly: #TODO comment this
-        req = handler.getone(uri_r, accept_datetime)
+         # Timemaps do not exist for that handler
+        mementos = handler.getone(uri_r, accept_datetime)
     else:
-        req = handler.getall(uri_r)
-    # Verifies and validates handler response
-    (uri, mementos) = validate_response(req)
+        # Query the cache for a timemap old enough
+        mementos = cache.get_until(uri_r, accept_datetime, handler.getall, uri_r)
     # If the handler returned several Mementos, take the closest
-    memento = locals[BEST](mementos, accept_datetime)
+    memento = tgutils.closest(mementos, accept_datetime)
     # Generates the TimeGate response body and Headers
     return respmemento(memento, uri_r, start_response, handler.singleonly)
 
@@ -401,12 +293,10 @@ def timemap(req_path, start_response):
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
-    uri_r = validate_uri(req_path, TIMEMAPSTR)
+    uri_r = tgutils.validate_req_uri(req_path, TIMEMAPSTR)
     # Dynamically loads the handler for that resource.
     handler = loadhandler(uri_r, False)
-    # Runs the handler's API request for all Mementos
-    req = handler.getall(uri_r)
-    # Verifies and validates handler response
-    (uri, mementos) = validate_response(req)
+    # Query the cache for a timemap not older than cache tolerance.
+    mementos = cache.get_all(uri_r, handler.getall, uri_r)
     # Generates the TimeMap response body and Headers
     return resptimemap(mementos, uri_r, start_response)

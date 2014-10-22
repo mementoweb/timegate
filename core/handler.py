@@ -4,7 +4,7 @@ import requests
 import logging
 from errors.handlererror import HandlerError
 
-from conf.constants import PROXIES
+import tgutils
 
 #TODO defeine what is imported where
 
@@ -65,3 +65,44 @@ class Handler:
         if req is None:
             raise HandlerError("Error requesting version server (%s)" % uri)
         return req
+
+
+def validate_response(handler_response):
+    """
+    Controls and parses the response from the Handler. Also extracts URI-R if provided
+    as a tuple with the form (URI, None) in the list.
+    :param handler_response: Either None, a tuple (URI, date) or a list of (URI, date)
+    where one tuple can have 'None' date to indicate that this URI is the original resource's.
+    :return: A tuple (URI-R, Mementos) where Mementos is a (URI, date)-list of
+    all Mementos. In the response, and all URIs/dates are strings and are valid.
+    """
+
+    mementos = []
+
+    # Check if Empty or if tuple
+    if not handler_response:
+        return (None, None)
+    elif isinstance(handler_response, tuple):
+        handler_response = [handler_response]
+    elif not isinstance(handler_response, list):
+        raise Exception('handler_response must be either None, 2-Tuple or 2-Tuple array')
+
+    try:
+        url_r = None
+        for (url, date) in handler_response:
+            valid_urlstr = tgutils.validate_uristr(url)
+            if date:
+                valid_datestr = tgutils.validate_datestr(date, strict=False)
+                mementos.append((valid_urlstr, valid_datestr))
+            else:
+                #(url, None) represents the original resource
+                url_r = valid_urlstr
+
+        return (url_r, mementos)
+
+    except Exception as e:
+        raise HandlerError('Bad response from Handler:'
+                           'response must be either None, (url, date)-Tuple or'
+                           ' (url, date)-Tuple array, where '
+                           'url, date are with standards formats  %s'
+                           % e.message, 503)

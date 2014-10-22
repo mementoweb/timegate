@@ -25,9 +25,9 @@ class GitHubHandler(Handler):
                               ([^/]+)/  # user
                               ([^/]+)  # repo
                               (/.+)?  # optional path
-                              """, re.X)
-        self.header_rex = re.compile('<(.+?)>; rel="next"')
-        self.file_rex = re.compile('(/blob)?/master')
+                              """, re.X)  # The format of URI-Rs
+        self.header_rex = re.compile('<(.+?)>; rel="next"')  # The regex for the query continuation header
+        self.file_rex = re.compile('(/blob)?/master')  # The regex for files
 
     def getall(self, uri):
         match = self.rex.match(uri)
