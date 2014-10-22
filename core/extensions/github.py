@@ -105,7 +105,6 @@ class GitHubHandler(Handler):
             if 'errors' in result:
                 # API-specific error
                 raise HandlerError(result['errors'])
-            print req
             if len(result) > 0:
                 # The request was successful
                 queries_results += result

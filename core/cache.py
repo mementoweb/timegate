@@ -7,6 +7,9 @@ from handler import validate_response
 
 from dogpile.cache import make_region
 
+from errors.handlererror import HandlerError
+from errors.cacheerror import CacheError
+
 import logging
 
 
@@ -35,7 +38,11 @@ class Cache:
             return getter(*args, **kwargs)
 
         # No need to refresh if table young enough
-        val = self.backend.get(memento)
+        try:
+            val = self.backend.get(memento)
+        except Exception as e:
+            raise CacheError("Exception loading cache content: %s" % e.message)
+
         age = 0
         timemap = None
 
@@ -46,10 +53,15 @@ class Cache:
         else:
             logging.info("No cached value for %s" % memento)
 
-
         if not val or date > age + self.tolerance:
             # Cache possibly outdated
-            (uri, timemap) = validate_response(getter(*args, **kwargs))
+            try:
+                (uri, timemap) = validate_response(getter(*args, **kwargs))
+            except HandlerError as he:
+                raise he
+            except Exception as e:
+                raise e
+                raise HandlerError("Error getting and parsing handler response: %s" % e.message)
             self.set(memento, timemap)
 
         return timemap

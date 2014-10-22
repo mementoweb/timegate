@@ -24,9 +24,9 @@ def validate_req_datetime(datestr, strict=True):
         if strict:
             date = datetime.strptime(datestr, DATEFMT)
         else:
-            date = parse_datestr(datestr, fuzzy=True).replace(tzinfo=tzutc())
+            date = parse_datestr(datestr, fuzzy=True)
         logging.debug("Accept datetime parsed to: "+date.strftime(DATEFMT))
-        return date
+        return date.replace(tzinfo=tzutc())
     except Exception as e:
         raise DateTimeError("Error parsing 'Accept-Datetime: %s' \n"
                             "Message: %s" % (datestr, e.message))
@@ -46,11 +46,13 @@ def validate_req_uri(pathstr, methodstr):
 
         # Trying to fix incomplete URI
         if not bool(HTTPRE.match(path)):
-            if not bool(WWWRE.match(path)):
-                path = 'www.'+path
+            # if not bool(WWWRE.match(path)):
+            #     path = 'www.'+path TODO remove?
             path = 'http://'+path
 
-        return validate_uristr(path)
+        uri = validate_uristr(path)
+        logging.debug("Requested URI parsed to: "+uri)
+        return uri
     except Exception as e:
         raise URIRequestError("Error: Cannot parse requested path '%s' \n"
                               "message: %s" % (pathstr, e.message))

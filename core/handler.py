@@ -92,6 +92,7 @@ def validate_response(handler_response):
         for (url, date) in handler_response:
             valid_urlstr = tgutils.validate_uristr(url)
             if date:
+                # TODO sorting
                 valid_datestr = tgutils.validate_datestr(date, strict=False)
                 mementos.append((valid_urlstr, valid_datestr))
             else:

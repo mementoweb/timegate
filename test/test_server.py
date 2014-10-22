@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import time
 
-from application import application as serv
+import application
 from conf.constants import TIMEMAPSTR, TIMEGATESTR
 from conf.constants import DATEFMT
 
@@ -13,8 +13,10 @@ import unittest  # Python unit test structure
 
 from webtest import TestApp  # WSGI application tester
 
-server = TestApp(serv)
+server = TestApp(application.application)
 api = TestApp(apistub)
+
+DATEHEADER = 'Wed, 15 Oct 2014 20:40:19 GMT'
 
 
 class TestServerSequence(unittest.TestCase):
@@ -78,9 +80,52 @@ class TestServerHandlerSeq(unittest.TestCase):
         ad = {'Accept-Datetime': timestr}
         response = server.get('/timegate/example.com/', headers=ad, status=200)
 
+class TestServerRealSeq(unittest.TestCase):
+
+    def test_TG_github_all_resources(self):
+        ad = {'Accept-Datetime': DATEHEADER}
+        response = server.get('/%s/https://github.com/mementoweb/timegate' % TIMEGATESTR, headers=ad, status=302)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/tree/master/core' % TIMEGATESTR, headers=ad, status=302)
+        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/timegate/master/core/extensions/example3.py' % TIMEGATESTR, headers=ad, status=302)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/example3.py' % TIMEGATESTR, headers=ad, status=302)
+
+    def test_TM_github_all_resources(self):
+        ad = {'Accept-Datetime': 'none'}
+        response = server.get('/%s/https://github.com/mementoweb/timegate' % TIMEMAPSTR, headers=ad, status=200)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/tree/master/core' % TIMEMAPSTR, headers=ad, status=200)
+        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/timegate/master/core/extensions/example3.py' % TIMEMAPSTR, headers=ad, status=200)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/example3.py' % TIMEMAPSTR, headers=ad, status=200)
+
+    def test_github_404s(self):
+        ad = {'Accept-Datetime': DATEHEADER}
+        response = server.get('/%s/https://github.com/memento2web/timegate' % TIMEMAPSTR, headers=ad, status=404)
+        response = server.get('/%s/https://github.com/meme/2/ntoweb/timegate/tree/master/core' % TIMEMAPSTR, headers=ad, status=404)
+        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/tim/egate/master/core/extensions/example3.py' % TIMEMAPSTR, headers=ad, status=404)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/exajmple3.py' % TIMEMAPSTR, headers=ad, status=404)
+
+
+    def test_github_bad_req(self):
+        ad = {'Accept-Datetime': 'Today'}
+        response = server.get('/%s/https://github.com/memento2web/timegate' % TIMEGATESTR, headers=ad, status=400)
+        ad = {'Accept-Datetime': DATEHEADER}
+        response = server.get('/%s/https://github.com/meme/2/ntoweb/timegate/tree/master/core' % 'test', headers=ad, status=400)
+
+    def test_wiki_ok(self):
+        ad = {'Accept-Datetime': DATEHEADER}
+        response = server.get('/%s/en.wikipedia.org/wiki/Albert_Einstein' % TIMEGATESTR, headers=ad, status=302)
+        response = server.get('/%s/en.wikipedia.org/wiki/Albert_Einstein' % TIMEMAPSTR, status=200)
+
+
+    def test_wiki_404(self):
+        ad = {'Accept-Datetime': DATEHEADER}
+        response = server.get('/%s/eeen.wikipedia.org/wiki/Einstein' % TIMEGATESTR, headers=ad, status=404)
+        response = server.get('/%s/en.wikipedia.org/wiki/Eiiiiinstein' % TIMEMAPSTR, status=404)
+        response = server.get('/%s/en.wikipedia.org/kiwi/Einstein' % TIMEMAPSTR, status=404)
+
 
 def suite():
     st = unittest.TestSuite()
     # st.addTest(unittest.makeSuite(TestServerSequence))
-    st.addTest(unittest.makeSuite(TestServerHandlerSeq))
+    # st.addTest(unittest.makeSuite(TestServerHandlerSeq))
+    st.addTest(unittest.makeSuite(TestServerRealSeq))
     return st
