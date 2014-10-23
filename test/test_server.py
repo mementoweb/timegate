@@ -122,6 +122,10 @@ class TestServerRealSeq(unittest.TestCase):
         response = server.get('/%s/en.wikipedia.org/wiki/Eiiiiinstein' % TIMEMAPSTR, status=404)
         response = server.get('/%s/en.wikipedia.org/kiwi/Albert_Einstein' % TIMEMAPSTR, status=404)
 
+        # TODO add test all kinds of BS responses from handlers
+
+
+
 
 def suite():
     st = unittest.TestSuite()

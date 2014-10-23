@@ -10,6 +10,7 @@ HTTP_STATUS = {
     404: "404 Not Found",
     302: "302 Found",
     400: "400 Bad Request",
+    500: "Internal Server Error",
     503: "503 Service Unavailable"
 }
 
