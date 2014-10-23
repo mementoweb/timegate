@@ -4,11 +4,11 @@ from dateutil.relativedelta import relativedelta
 import logging
 from dogpile.cache import make_region
 
+from conf.config import CACHE_EXP, CACHE_FILE, CACHE_RWLOCK, CACHE_DLOCK, CACHE_TOLERANCE
 from errors.handlererror import HandlerError
 from errors.cacheerror import CacheError
-import tgutils
-from conf.config import CACHE_EXP, CACHE_FILE, CACHE_RWLOCK, CACHE_DLOCK, CACHE_TOLERANCE
 from handler import validate_response
+import tgutils
 
 
 class Cache:

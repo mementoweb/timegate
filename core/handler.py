@@ -60,7 +60,7 @@ class Handler:
                 uri, '&'.join(map(lambda(k, v): '%s=%s' % (k, v),
                                                 kwargs['params'].items()))))
         except Exception as e:
-            pass
+            pass # Key errors on 'params'
 
         try:
             req = requests.get(uri, **kwargs)

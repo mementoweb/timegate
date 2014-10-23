@@ -7,14 +7,13 @@ import logging
 
 import re
 
-from core.handler import validate_response
-
-from tgutils import nowstr, validate_req_datetime, validate_req_uri, closest, date_str
 from conf.constants import DATEFMT,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT
 from conf.config import CACHE_USE, STRICT_TIME, HOST
 from errors.urierror import URIRequestError
 from errors.timegateerror import TimegateError
 from core.cache import Cache
+from core.handler import validate_response
+from tgutils import nowstr, validate_req_datetime, validate_req_uri, closest, date_str
 
 
 # Initialization code

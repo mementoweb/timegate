@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
+__author__ = 'Yorick Chollet'
+
 import time
+import unittest  # Python unit test structure
+from webtest import TestApp  # WSGI application tester
 
 import application
 from conf.constants import TIMEMAPSTR, TIMEGATESTR
 from conf.constants import DATEFMT
 
 from test.apistub import application as apistub
-
-__author__ = 'Yorick Chollet'
-
-import unittest  # Python unit test structure
-
-from webtest import TestApp  # WSGI application tester
 
 server = TestApp(application.application)
 api = TestApp(apistub)

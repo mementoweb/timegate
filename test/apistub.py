@@ -1,8 +1,3 @@
-from urlparse import urlparse
-
-from dateutil import parser
-
-
 __author__ = 'Yorick Chollet'
 
 debug = False

@@ -2,16 +2,15 @@ __author__ = 'Yorick Chollet'
 
 import logging
 
+from datetime import datetime, timedelta
+from dateutil.parser import parse as parse_datestr
+from dateutil.tz import tzutc
+from urlparse import urlparse
+
 from conf.constants import DATEFMT, HTTPRE
 from errors.urierror import URIRequestError
 from errors.dateerror import DateTimeError
 
-from dateutil.tz import tzutc
-
-from urlparse import urlparse
-
-from datetime import datetime, timedelta
-from dateutil.parser import parse as parse_datestr
 
 def validate_req_datetime(datestr, strict=True):
     """
