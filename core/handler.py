@@ -1,12 +1,11 @@
-import tgutils
-
 __author__ = 'Yorick Chollet'
 
 import requests
 import logging
-from errors.handlererror import HandlerError
+from operator import itemgetter
 
-#TODO defeine what is imported where
+import tgutils
+from errors.handlererror import HandlerError
 
 
 class Handler:
@@ -73,8 +72,8 @@ def validate_response(handler_response):
     as a tuple with the form (URI, None) in the list.
     :param handler_response: Either None, a tuple (URI, date) or a list of (URI, date)
     where one tuple can have 'None' date to indicate that this URI is the original resource's.
-    :return: A tuple (URI-R, Mementos) where Mementos is a (URI, date)-list of
-    all Mementos. In the response, and all URIs/dates are strings and are valid.
+    :return: A tuple (URI-R, Mementos) where Mementos is a (URI_str, date_obj)-list of
+    all Mementos. In the response, and all URIs/dates are valid.
     """
 
     # Input check
@@ -94,9 +93,8 @@ def validate_response(handler_response):
         for (url, date) in handler_response:
             valid_urlstr = tgutils.validate_uristr(url)
             if date:
-                # TODO sorting
-                valid_datestr = tgutils.validate_datestr(date, strict=False)
-                mementos.append((valid_urlstr, valid_datestr))
+                valid_date = tgutils.validate_date(date, strict=False)
+                mementos.append((valid_urlstr, valid_date))
             else:
                 #(url, None) represents the original resource
                 url_r = valid_urlstr
@@ -109,5 +107,8 @@ def validate_response(handler_response):
 
     if not mementos:
         raise HandlerError('Handler response does not contain any memento for the requested resource.', 404)
+    else:
+        sorted_list = sorted(mementos, key=itemgetter(1))
 
-    return (url_r, mementos)
+
+    return (url_r, sorted_list)

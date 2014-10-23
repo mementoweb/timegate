@@ -7,9 +7,11 @@ import logging
 
 import re
 
-from tgutils import nowstr, parse_date, validate_req_datetime, validate_req_uri, closest
-from conf.constants import DATEFMT, USE_CACHE, TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, \
-    STRICT_TIME
+from core.handler import validate_response
+
+from tgutils import nowstr, validate_req_datetime, validate_req_uri, closest, date_str
+from conf.constants import DATEFMT,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT
+from conf.config import CACHE_USE, STRICT_TIME, HOST
 from errors.urierror import URIRequestError
 from errors.timegateerror import TimegateError
 from core.cache import Cache
@@ -19,10 +21,8 @@ from core.cache import Cache
 # Logger configuration
 # logging.basicConfig(filename=LOG_FILE, filemode='w',
 #                     format=LOG_FMT, level=logging.INFO) # release
-logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.DEBUG) # DEBUG
-logging.getLogger('uwsgi').setLevel(logging.WARNING)
-
-# TODO define request url, define if JSON/XML allowed?
+logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.DEBUG)  # DEBUG
+# logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
 # Builds the mapper from URI regular expression to handler class
 try:
@@ -57,16 +57,18 @@ except Exception as e:
     logging.debug("Exception during handler loading.")
     raise Exception("Fatal Error loading handlers: %s" % e.message)
 
-
+# Cache loading
 try:
-    cache = Cache(tolerance=3600, enabled=USE_CACHE) # TODO const
+    cache = Cache(enabled=CACHE_USE)
 except Exception as e:
+    logging.debug("Exception during cache loading.")
     raise Exception("Fatal Error loading cache: %s" % e.message)
 
 
 def application(env, start_response):
     """
-    WSGI application object.
+    WSGI application object. This is the start point of the server. Timegate /
+    TimeMap requests are parsed here.
     :param env: Dictionary containing environment variables from the client request
     :param start_response: Callback function used to send HTTP status and headers to the server.
     :return: The response body.
@@ -75,17 +77,17 @@ def application(env, start_response):
     # Extracting requested values
     req_path = env.get('PATH_INFO', '/')
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
-    req_meth = env.get('REQUEST_METHOD')
+    req_met = env.get('REQUEST_METHOD')
     logging.info("Incoming request: %s %s Accept-Datetime: %s" % (
-                 req_meth, req_path, req_datetime))
+                 req_met, req_path, req_datetime))
 
     # Standard response header
     headers = [('Content-Type', 'text/html')]
 
     # Escaping all other than 'GET' requests:
-    if req_meth != 'GET' and req_meth != 'HEAD':
+    if req_met != 'GET' and req_met != 'HEAD':
         status = 405
-        message = "Request method '%s' not allowed." % req_meth
+        message = "Request method '%s' not allowed." % req_met
         return resperror(status, message, start_response, headers)
 
     # Processing request service type and path
@@ -118,11 +120,11 @@ def application(env, start_response):
 def resperror(status, message, start_response, headers):
     """
     Returns an error message to the user
-    :param status:
-    :param message:
-    :param start_response:
-    :param headers:
-    :return:
+    :param status: HTTP Status of the error
+    :param message: The error message
+    :param start_response: WSGI callback function
+    :param headers: Error HTTP headers
+    :return: The HTTP body as a list of one element
     """
     body = ["%s \n %s \n" % (status, message)]
     start_response(HTTP_STATUS[status], headers)
@@ -130,12 +132,13 @@ def resperror(status, message, start_response, headers):
     return body
 
 
-def respmemento(memento, uri_r, start_response, singleonly=False):
+def respmemento(uri_m, uri_r, start_response, singleonly=False):
     """
-    Returns the best Memento requested by the user
-    :param memento:
-    :param start_response:
-    :return:
+    Returns a 302 redirection to the best Memento
+    for a resource and a datetime requested by the user.
+    :param uri_m: The URI string of the best memento.
+    :param start_response: WSGI callback function
+    :return: The HTTP body as a list of one element
     """
 
     #TODO encoding response as utf8 ?!?
@@ -154,24 +157,24 @@ def respmemento(memento, uri_r, start_response, singleonly=False):
         ('Content-Length', '0'),
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close'),
-        ('Location', memento),
+        ('Location', uri_m),
         ('Link', linkheaderval)
     ]
     # TODO put all normal headers in conf.constants
     body = []
     start_response(HTTP_STATUS[status], headers)
     logging.info("Returning %d, Memento=%s for URI-R=%s" %
-                 (status, memento, uri_r))
+                 (status, uri_m, uri_r))
     return body
 
 
 def resptimemap(mementos, uri_r, start_response):
     """
     Creates and sends a timemap response.
-    :param mementos: A list of (uri, datetime) tuples representing a timemap
+    :param mementos: A list of (uri_str, datetime_obj) tuples representing a timemap
     :param uri_r: The URI-R of the original resource
     :param start_response: WSGI callback function
-    :return: The timemap body as a list of one element
+    :return: The HTTP body as a list of one element
     """
 
     # Adds Original, TimeGate and TimeMap links
@@ -186,12 +189,11 @@ def resptimemap(mementos, uri_r, start_response):
     mementos_links = []
     if mementos:
         first_url = mementos[0][0]
-        first_date = parse_date(mementos[0][1])
+        first_date = mementos[0][1]
         last_url = mementos[0][0]
-        last_date = parse_date(mementos[0][1])
+        last_date = mementos[0][1]
 
-        for (urlstr, datestr) in mementos:
-            date = parse_date(datestr)
+        for (urlstr, date) in mementos:
             if date < first_date:
                 first_date = date
                 first_url = urlstr
@@ -200,7 +202,7 @@ def resptimemap(mementos, uri_r, start_response):
                 last_url = urlstr
 
             linkstr = '<%s>; rel="memento"; datetime="%s"' % (
-                urlstr, datestr)
+                urlstr, date_str(date))
             mementos_links.append(linkstr)
         first_datestr = first_date.strftime(DATEFMT)
         last_datestr = last_date.strftime(DATEFMT)
@@ -232,8 +234,11 @@ def resptimemap(mementos, uri_r, start_response):
 
 def loadhandler(uri, singlerequest=False):
     """
-    Loads the handler for the requested URI if it exists.
+    Loads the first handler for the requested URI if it exists.
     :param uri: The URI to match to a handler
+    :param singlerequest: Boolean indicating if the requests is for a single
+    memento or for a timemap. If False (default), then the handler MUST allow
+    batch requests.
     :return: the handler object
     Raises URIRequestError if no handler matches this URI
     """
@@ -246,6 +251,7 @@ def loadhandler(uri, singlerequest=False):
         method = 'timemap'
 
     #TODO define what to do if multiple matches
+    #Finds the first handler which regex match with the requested URI-R
     for (regex, handler) in mapper:
         if bool(regex.match(uri)):
             logging.debug("%s matched pattern %s of handler %s" %
@@ -260,13 +266,13 @@ def timegate(req_path, start_response, req_datetime):
     """
     Handles timegate high-level logic. Fetch the Memento for the requested URI
     at the requested date time. Returns a HTTP 302 response if it exists.
+    If the resource handler allows batch requests, then the result may be
+    cached.
     :param req_datetime: The Accept-Datetime string
     :param req_path: The requested original resource URI
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
-
-    #TODO define how TimeMap/TimeGate Single/all
 
     # Parses the date time and original resoure URI
     accept_datetime = validate_req_datetime(req_datetime, STRICT_TIME)
@@ -274,9 +280,9 @@ def timegate(req_path, start_response, req_datetime):
     # Dynamically loads the handler for that resource
     handler = loadhandler(uri_r, True)
     # Runs the handler's API request for the Memento
-    if handler.singleonly: #TODO comment this
-         # Timemaps do not exist for that handler
-        mementos = handler.getone(uri_r, accept_datetime)
+    if handler.singleonly:
+         # Timemaps do not exist for that handler. No need to check the cache.
+        mementos = validate_response(handler.getone(uri_r, accept_datetime))
     else:
         # Query the cache for a timemap old enough
         mementos = cache.get_until(uri_r, accept_datetime, handler.getall, uri_r)
@@ -284,6 +290,7 @@ def timegate(req_path, start_response, req_datetime):
     memento = closest(mementos, accept_datetime)
     # Generates the TimeGate response body and Headers
     return respmemento(memento, uri_r, start_response, handler.singleonly)
+
 
 def timemap(req_path, start_response):
     """
