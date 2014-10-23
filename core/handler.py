@@ -1,10 +1,10 @@
+import tgutils
+
 __author__ = 'Yorick Chollet'
 
 import requests
 import logging
 from errors.handlererror import HandlerError
-
-import tgutils
 
 #TODO defeine what is imported where
 
@@ -17,7 +17,7 @@ class Handler:
     singleonly = False
 
     # Disables all 'requests' module event logs that are at least not WARNINGS
-    logging.getLogger('requests').setLevel(logging.WARNING)
+    logging.getLogger('requests').setLevel(logging.DEBUG)
 
 
     def __init__(self):
@@ -77,18 +77,20 @@ def validate_response(handler_response):
     all Mementos. In the response, and all URIs/dates are strings and are valid.
     """
 
-    mementos = []
-
-    # Check if Empty or if tuple
+    # Input check
     if not handler_response:
-        return (None, None)
+        raise HandlerError('Handler response Empty.', 404)
     elif isinstance(handler_response, tuple):
         handler_response = [handler_response]
-    elif not isinstance(handler_response, list):
-        raise Exception('handler_response must be either None, 2-Tuple or 2-Tuple array')
+    elif not (isinstance(handler_response, list) and
+                  isinstance(handler_response[0], tuple)):
+        raise HandlerError('handler_response must be either None, 2-Tuple or 2-Tuple array', 503)
+
+    # Output variables
+    mementos = []
+    url_r = None
 
     try:
-        url_r = None
         for (url, date) in handler_response:
             valid_urlstr = tgutils.validate_uristr(url)
             if date:
@@ -98,12 +100,14 @@ def validate_response(handler_response):
             else:
                 #(url, None) represents the original resource
                 url_r = valid_urlstr
-
-        return (url_r, mementos)
-
     except Exception as e:
         raise HandlerError('Bad response from Handler:'
                            'response must be either None, (url, date)-Tuple or'
                            ' (url, date)-Tuple array, where '
                            'url, date are with standards formats  %s'
                            % e.message, 503)
+
+    if not mementos:
+        raise HandlerError('Handler response does not contain any memento for the requested resource.', 404)
+
+    return (url_r, mementos)

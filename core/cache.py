@@ -1,7 +1,8 @@
+import tgutils
+
 __author__ = 'Yorick Chollet'
 
 from dateutil.relativedelta import relativedelta
-import tgutils
 
 from handler import validate_response
 
@@ -35,7 +36,8 @@ class Cache:
 
     def get_until(self, memento, date, getter, *args, **kwargs):
         if not self.enabled:
-            return getter(*args, **kwargs)
+            (uri, timemap) = validate_response(getter(*args, **kwargs))
+            return timemap
 
         # No need to refresh if table young enough
         try:
@@ -53,16 +55,17 @@ class Cache:
         else:
             logging.info("No cached value for %s" % memento)
 
-        if not val or date > age + self.tolerance:
+        if not self.enabled or not val or date > age + self.tolerance:
             # Cache possibly outdated
             try:
                 (uri, timemap) = validate_response(getter(*args, **kwargs))
             except HandlerError as he:
                 raise he
             except Exception as e:
-                raise e
                 raise HandlerError("Error getting and parsing handler response: %s" % e.message)
-            self.set(memento, timemap)
+
+            if self.enabled:
+                self.set(memento, timemap)
 
         return timemap
 

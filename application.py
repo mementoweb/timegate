@@ -2,23 +2,25 @@ __author__ = 'Yorick Chollet'
 
 import importlib
 import inspect
-import re
 import glob
 import logging
 
-import tgutils
+import re
 
-
-from conf.constants import DATEFMT, USE_CACHE, TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, LOG_FILE, STRICT_TIME, BEST
+from tgutils import nowstr, parse_date, validate_req_datetime, validate_req_uri, closest
+from conf.constants import DATEFMT, USE_CACHE, TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, HOST, EXTENSIONS_PATH, LOG_FMT, \
+    STRICT_TIME
 from errors.urierror import URIRequestError
 from errors.timegateerror import TimegateError
 from core.cache import Cache
+
 
 # Initialization code
 # Logger configuration
 # logging.basicConfig(filename=LOG_FILE, filemode='w',
 #                     format=LOG_FMT, level=logging.INFO) # release
 logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.DEBUG) # DEBUG
+logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
 # TODO define request url, define if JSON/XML allowed?
 
@@ -147,7 +149,7 @@ def respmemento(memento, uri_r, start_response, singleonly=False):
 
     status = 302
     headers = [
-        ('Date', tgutils.nowstr()), # TODO check timezone
+        ('Date', nowstr()), # TODO check timezone
         ('Vary', 'accept-datetime'),
         ('Content-Length', '0'),
         ('Content-Type', 'text/plain; charset=UTF-8'),
@@ -184,12 +186,12 @@ def resptimemap(mementos, uri_r, start_response):
     mementos_links = []
     if mementos:
         first_url = mementos[0][0]
-        first_date = tgutils.parse_date(mementos[0][1])
+        first_date = parse_date(mementos[0][1])
         last_url = mementos[0][0]
-        last_date = tgutils.parse_date(mementos[0][1])
+        last_date = parse_date(mementos[0][1])
 
         for (urlstr, datestr) in mementos:
-            date = tgutils.parse_date(datestr)
+            date = parse_date(datestr)
             if date < first_date:
                 first_date = date
                 first_url = urlstr
@@ -218,7 +220,7 @@ def resptimemap(mementos, uri_r, start_response):
     # Builds HTTP Response and WSGI return
     status = 200
     headers = [
-        ('Date', tgutils.nowstr()), # TODO check timezone
+        ('Date', nowstr()), # TODO check timezone
         ('Content-Length', str(len(body))),
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close')]
@@ -267,8 +269,8 @@ def timegate(req_path, start_response, req_datetime):
     #TODO define how TimeMap/TimeGate Single/all
 
     # Parses the date time and original resoure URI
-    accept_datetime = tgutils.validate_req_datetime(req_datetime, STRICT_TIME)
-    uri_r = tgutils.validate_req_uri(req_path, TIMEGATESTR)
+    accept_datetime = validate_req_datetime(req_datetime, STRICT_TIME)
+    uri_r = validate_req_uri(req_path, TIMEGATESTR)
     # Dynamically loads the handler for that resource
     handler = loadhandler(uri_r, True)
     # Runs the handler's API request for the Memento
@@ -279,7 +281,7 @@ def timegate(req_path, start_response, req_datetime):
         # Query the cache for a timemap old enough
         mementos = cache.get_until(uri_r, accept_datetime, handler.getall, uri_r)
     # If the handler returned several Mementos, take the closest
-    memento = tgutils.closest(mementos, accept_datetime)
+    memento = closest(mementos, accept_datetime)
     # Generates the TimeGate response body and Headers
     return respmemento(memento, uri_r, start_response, handler.singleonly)
 
@@ -293,7 +295,7 @@ def timemap(req_path, start_response):
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
-    uri_r = tgutils.validate_req_uri(req_path, TIMEMAPSTR)
+    uri_r = validate_req_uri(req_path, TIMEMAPSTR)
     # Dynamically loads the handler for that resource.
     handler = loadhandler(uri_r, False)
     # Query the cache for a timemap not older than cache tolerance.

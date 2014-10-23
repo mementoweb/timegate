@@ -13,6 +13,8 @@ from urlparse import urlparse
 from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_datestr
 
+test = 1
+
 def validate_req_datetime(datestr, strict=True):
     """
     Parses the requested date string into a dateutil time object

@@ -112,15 +112,15 @@ class TestServerRealSeq(unittest.TestCase):
 
     def test_wiki_ok(self):
         ad = {'Accept-Datetime': DATEHEADER}
-        response = server.get('/%s/en.wikipedia.org/wiki/Albert_Einstein' % TIMEGATESTR, headers=ad, status=302)
-        response = server.get('/%s/en.wikipedia.org/wiki/Albert_Einstein' % TIMEMAPSTR, status=200)
+        response = server.get('/%s/en.wikipedia.org/wiki/Palézieux' % TIMEGATESTR, headers=ad, status=302)
+        response = server.get('/%s/en.wikipedia.org/wiki/Palézieux' % TIMEMAPSTR, status=200)
 
 
     def test_wiki_404(self):
         ad = {'Accept-Datetime': DATEHEADER}
-        response = server.get('/%s/eeen.wikipedia.org/wiki/Einstein' % TIMEGATESTR, headers=ad, status=404)
+        response = server.get('/%s/eeen.wikipedia.org/wiki/Albert_Einstein' % TIMEGATESTR, headers=ad, status=404)
         response = server.get('/%s/en.wikipedia.org/wiki/Eiiiiinstein' % TIMEMAPSTR, status=404)
-        response = server.get('/%s/en.wikipedia.org/kiwi/Einstein' % TIMEMAPSTR, status=404)
+        response = server.get('/%s/en.wikipedia.org/kiwi/Albert_Einstein' % TIMEMAPSTR, status=404)
 
 
 def suite():

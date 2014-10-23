@@ -61,10 +61,15 @@ class WikiHandler(Handler):
                 raise HandlerError(result['error'])
             if 'warnings' in result:
                 logging.warn(result['warnings'])
-            if 'query' in result:
+            try: #TODO clean this
                 # The request was successful
-                pid = result['query']['pageids'][0]  # the JSON key of the page
+                pid = result['query']['pageids'][0]  # the JSON key of the page (only one)
                 queries_results += result['query']['pages'][pid]['revisions']
+                if ('missing' in result['query']['pages'][pid] or
+                                'invalid' in result['query']['pages'][pid]):
+                    raise HandlerError("Cannot find resource on version server.", 404)
+            except Exception as e:
+                raise HandlerError("Cannot find resource on version server.", 404)
             if 'continue' in result:
                 # The response was truncated, the rest can be obtained using
                 # &rvcontinue=ID
