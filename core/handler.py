@@ -16,7 +16,7 @@ class Handler:
     singleonly = False
 
     # Disables all 'requests' module event logs that are at least not WARNINGS
-    logging.getLogger('requests').setLevel(logging.DEBUG)
+    logging.getLogger('requests').setLevel(logging.WARNING)
 
 
     def __init__(self):
@@ -52,10 +52,16 @@ class Handler:
         :return: A requests response object
         Raises HandlerError if the requests fails to access the API
         """
-
         uri = host + resource
 
-        logging.info("Sending API request for %s, params=%s" % (uri, kwargs))
+        # Request logging for debug purposes.
+        try:
+            logging.info("Sending API request for %s?%s" % (
+                uri, '&'.join(map(lambda(k, v): '%s=%s' % (k, v),
+                                                kwargs['params'].items()))))
+        except Exception as e:
+            pass
+
         try:
             req = requests.get(uri, **kwargs)
         except Exception as e:
