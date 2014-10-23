@@ -72,7 +72,7 @@ def validate_response(handler_response):
     as a tuple with the form (URI, None) in the list.
     :param handler_response: Either None, a tuple (URI, date) or a list of (URI, date)
     where one tuple can have 'None' date to indicate that this URI is the original resource's.
-    :return: A tuple (URI-R, Mementos) where Mementos is a (URI_str, date_obj)-list of
+    :return: A tuple (URI-R, Mementos) where Mementos is a sorted (URI_str, date_obj)-list of
     all Mementos. In the response, and all URIs/dates are valid.
     """
 
@@ -108,6 +108,7 @@ def validate_response(handler_response):
     if not mementos:
         raise HandlerError('Handler response does not contain any memento for the requested resource.', 404)
     else:
+        # Sort by datetime
         sorted_list = sorted(mementos, key=itemgetter(1))
 
 

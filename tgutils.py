@@ -85,11 +85,12 @@ def nowstr():
     return date_str(datetime.utcnow()).encode('utf8')
 
 
-def closest(timemap, accept_datetime):
+def closest(timemap, accept_datetime, sorted=True):
     """
     Finds the chronologically closest memento
-    :param timemap:
+    :param timemap: A sorted Timemap
     :param accept_datetime: the time object
+    :param sorted: boolean to indicate if the list is sorted or not.
     :return:
     """
 
@@ -101,6 +102,10 @@ def closest(timemap, accept_datetime):
         if diff < delta:
             memento = url
             delta = diff
+        elif sorted:
+            # The list is sorted and the delta didn't increase this time.
+            # It will not increase anymore: Return the Memento (best one).
+            return memento
 
     return memento
 
