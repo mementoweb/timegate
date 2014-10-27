@@ -58,12 +58,25 @@ def validate_req_uri(pathstr, methodstr):
 
 
 def validate_uristr(uristr):
+    """
+    Controls and validates the uri string.
+    :param uristr: The uri string that needs to be verified
+    :return: The validated uri string. Raises an Exception if it is not valid.
+    """
     try:
         return str(urlparse(uristr).geturl())
     except Exception as e:
         raise Exception("Error: cannot parse uri string %s" % uristr)
 
 def validate_date(datestr, strict=False):
+    """
+    Controls and validates the date string.
+    :param datestr: The date string representation
+    :param strict: When True, the date must strictly follow the format defined
+    in the config file (DATEFMT). When False, the date string can be fuzzy and
+    the function will try to reconstruct it.
+    :return: The datetime object form the parsed date string.
+    """
     try:
         if strict:
             date = datetime.strptime(datestr, DATEFMT)
@@ -74,13 +87,24 @@ def validate_date(datestr, strict=False):
         raise Exception("Error: cannot parse date string %s" % datestr)
 
 
-def date_str(date):
-    return date.strftime(DATEFMT)
+def date_str(date, format=DATEFMT):
+    """
+    Returns a string representation of the date object.
+    :param date: the date object which needs to be printed
+    :param format: the string format of the date
+    By default this is the format specified in the config file
+    :return: The formatted date string.
+    """
+    return date.strftime(format)
 
 def parse_date(*args, **kwargs):
     return parse_datestr(*args, **kwargs)
 
 def nowstr():
+    """
+    String representation of the current UTC time
+    :return: a string representation of the current UTC time
+    """
     return date_str(datetime.utcnow()).encode('utf8')
 
 
@@ -110,4 +134,8 @@ def closest(timemap, accept_datetime, sorted=True):
 
 
 def now():
+    """
+    Date representation of the current UTC time
+    :return: a date representation of the current UTC time
+    """
     return datetime.utcnow().replace(tzinfo=tzutc())
