@@ -1,1 +1,3 @@
 uwsgi --http :9999 --wsgi-file application/wsgi.py --master
+
+nohup uwsgi --socket 127.0.0.1:9000 --wsgi-file wsgi.py --master --processes 12 --threads 20 --stats :9010 > logs/uwsgi.log &

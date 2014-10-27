@@ -6,6 +6,14 @@ __author__ = 'Yorick Chollet'
 from core.handler import Handler
 from errors.handlererror import HandlerError
 
+ACCEPTABLE_RESOURCE = """
+Acceptable resources URI:
+repositories (github.com/:user/:repo/),
+folders (github.com/:user/:repo/trees/:path),
+files (github.com/:user/:repo/blob/:path)
+and raw files (raw.githubusercontent.com/:user/:repo/master/:path)
+"""
+
 class GitHubHandler(Handler):
 
 
@@ -30,10 +38,12 @@ class GitHubHandler(Handler):
         self.file_rex = re.compile('(/blob)?/master')  # The regex for files
 
     def getall(self, uri):
-        match = self.rex.match(uri)
-        assert bool(match)
 
         # URI deconstruction
+        match = self.rex.match(uri)
+        if not bool(match):
+            raise HandlerError("Github uri does not match a valid resource. \n"
+                               + ACCEPTABLE_RESOURCE, 404)
         protocol = match.groups()[0]
         base = match.groups()[1]
         user = match.groups()[2]
@@ -68,6 +78,10 @@ class GitHubHandler(Handler):
                             commit['sha'], path)
                     else:
                         # Raw Resource
+                        if path == '' or path.endswith('/'):
+                            raise HandlerError("'%s' not found: \n"
+                                            "Raw resource must be a file." %
+                                            path, 404)
                         memento_path = '/%s%s' % (
                             commit['sha'], path)
 
@@ -79,7 +93,8 @@ class GitHubHandler(Handler):
 
         else:
             # The resource is neither a file nor a directory.
-            raise HandlerError("GitHub resource type not found.", 404)
+            raise HandlerError("GitHub resource type not found."
+                               + ACCEPTABLE_RESOURCE, 404)
 
         # Initiating request variables
         apibase = '%s/repos/%s/%s/commits' % (self.api, user, repo)
@@ -97,7 +112,8 @@ class GitHubHandler(Handler):
             cont = None
             if not req:
                 # status code different than 2XX
-                raise HandlerError("Cannot find resource on version server.", 404)
+                raise HandlerError("Cannot find resource on version server.",
+                                   404)
             result = req.json()
             if 'message' in result:
                 # API-specific error
@@ -122,7 +138,8 @@ class GitHubHandler(Handler):
             return map(mapper, queries_results)
         else:
             # No results found
-            raise HandlerError("Resource not found", 404)
+            raise HandlerError("Resource not found, empty response from API",
+                               404)
 
     # This example requires the datetime
     def getone(self, uri, datetime):

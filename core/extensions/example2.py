@@ -1,5 +1,3 @@
-from pip._vendor.requests.packages.urllib3 import request
-
 __author__ = 'Yorick Chollet'
 
 from core.handler import Handler

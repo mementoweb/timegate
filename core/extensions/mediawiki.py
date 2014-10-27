@@ -6,6 +6,7 @@ __author__ = 'Yorick Chollet'
 from core.handler import Handler
 from errors.handlererror import HandlerError
 
+
 class WikiHandler(Handler):
 
 
