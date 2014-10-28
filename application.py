@@ -14,7 +14,7 @@ from errors.urierror import URIRequestError
 from errors.timegateerror import TimegateError
 from core.cache import Cache
 from core.handler import validate_response
-from tgutils import nowstr, validate_req_datetime, validate_req_uri, closest, date_str, now
+from tgutils import nowstr, validate_req_datetime, validate_req_uri, closest, closest_past, date_str, now
 
 
 # Initialization code
@@ -356,7 +356,7 @@ def timegate(req_path, start_response, req_datetime):
         # Query the cache for a timemap old enough
         mementos = cache.get_until(uri_r, accept_datetime, handler.getall, uri_r)
     # If the handler returned several Mementos, take the closest
-    memento = closest(mementos, accept_datetime)
+    memento = closest_past(mementos, accept_datetime)
     # Generates the TimeGate response body and Headers
     return respmemento(memento, uri_r, start_response, handler.singleonly)
 

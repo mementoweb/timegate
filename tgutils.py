@@ -70,6 +70,7 @@ def validate_uristr(uristr):
     except Exception as e:
         raise Exception("Error: cannot parse uri string %s" % uristr)
 
+
 def validate_date(datestr, strict=False):
     """
     Controls and validates the date string.
@@ -99,8 +100,10 @@ def date_str(date, format=DATEFMT):
     """
     return date.strftime(format)
 
+
 def parse_date(*args, **kwargs):
     return parse_datestr(*args, **kwargs)
+
 
 def nowstr():
     """
@@ -133,6 +136,41 @@ def closest(timemap, accept_datetime, sorted=True):
             return memento
 
     return memento
+
+
+def closest_past(timemap, accept_datetime, sorted=True):
+    """
+    Finds the closest memento in the past of a datetime
+    :param timemap: A sorted Timemap
+    :param accept_datetime: the time object for the maximum datetime requested
+    :param sorted: boolean to indicate if the list is sorted or not.
+    :return: The uri_m string of the closest memento
+    """
+
+    delta = timedelta.max
+    prev = None
+    next = None
+
+    for (url, dt) in timemap:
+        diff = abs(accept_datetime - dt)
+        if sorted:
+            if dt > accept_datetime:
+                if prev is not None:
+                    return prev  # We passed 'accept-datetime'
+                else:
+                    return url  # The first of the list (even if it is after accept datetime)
+            prev = url
+        elif diff < delta:
+            delta = diff
+            if dt > accept_datetime:
+                next = url
+            else:
+                prev = url
+
+    if prev is not None:
+        return prev
+    else:
+        return next  # The first after accept datetime
 
 
 def now():

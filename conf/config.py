@@ -7,7 +7,7 @@ HOST = 'http://127.0.0.1:9999'
 STRICT_TIME = True
 
 # The timegate will use 'closest' as the function for best Memento
-BEST = 'closest'
+BEST = 'closest_past'
 
 # Cache values expire after one day.
 CACHE_EXP = 3600 * 24
