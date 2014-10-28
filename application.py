@@ -64,6 +64,8 @@ except Exception as e:
     raise Exception("Fatal Error loading cache: %s" % e.message)
 
 
+logging.info("Application loaded. Host: %s" % HOST)
+
 def application(env, start_response):
     """
     WSGI application object. This is the start point of the server. Timegate /
@@ -145,7 +147,8 @@ def respmemento(uri_m, uri_r, start_response, singleonly=False):
     linkheaderval = '<%s>; rel="original"' % uri_r
     if not singleonly:
         timemaplink = '%s/%s/%s' % (HOST, TIMEMAPSTR, uri_r)
-        linkheaderval += ', <%s>; rel="timemap"' % timemaplink
+        linkheaderval += ', <%s>; rel="timemap";' \
+                         ' type="application/link-format"' % timemaplink
 
     linkheaderval = linkheaderval
 
@@ -223,7 +226,7 @@ def resptimemap(mementos, uri_r, start_response):
     headers = [
         ('Date', nowstr()), # TODO check timezone
         ('Content-Length', str(len(body))),
-        ('Content-Type', 'text/plain; charset=UTF-8'),
+        ('Content-Type', 'application/link-format'),
         ('Connection', 'close')]
     start_response(HTTP_STATUS[status], headers)
     logging.info("Returning %d, TimeMap of size %d for URI-R=%s" %

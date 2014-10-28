@@ -109,7 +109,7 @@ class Cache:
         Sets / refreshes the cached timemap for that URI-R. And appends it with
         a timestamp.
         :param uri_r: The URI-R of the original resource
-        :param timemap: The time at which the request was generated.
+        :param timemap:
         :return: the backend setter method return value.
         """
         logging.info("Updating cache for %s" % uri_r)

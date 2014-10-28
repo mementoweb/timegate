@@ -1,3 +1,8 @@
 uwsgi --http :9999 --wsgi-file application/wsgi.py --master
 
 nohup uwsgi --socket 127.0.0.1:9000 --wsgi-file wsgi.py --master --processes 12 --threads 20 --stats :9010 > logs/uwsgi.log &
+
+
+http://timegate.mementodepot.org/timemap/https://github.com/mementoweb/timegate
+
+curl -i -H "Accept-Datetime: Mon, 06 Oct 2014 20:54:44 GMT" http://timegate.mementodepot.org/timegate/https://github.com/mementoweb/timegate
