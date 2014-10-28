@@ -224,7 +224,7 @@ def resptimemap(mementos, uri_r, start_response):
     # Builds HTTP Response and WSGI return
     status = 200
     headers = [
-        ('Date', nowstr()), # TODO check timezone
+        ('Date', nowstr()),  # TODO check timezone
         ('Content-Length', str(len(body))),
         ('Content-Type', 'application/link-format'),
         ('Connection', 'close')]
