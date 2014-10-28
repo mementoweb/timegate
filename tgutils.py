@@ -20,7 +20,7 @@ def validate_req_datetime(datestr, strict=True):
     :param strict: If the datetime MUST follow the exact format DATEFMT
     :return: the dateutil time object
     """
-    
+
     try:
         if strict:
             date = datetime.strptime(datestr, DATEFMT)

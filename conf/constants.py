@@ -24,6 +24,10 @@ DATEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 HTTPRE = re.compile('https?://', re.IGNORECASE)
 WWWRE = re.compile('www.', re.IGNORECASE)
 
+MIME_JSON = 'application/json'
+
+MIME_LINK = 'application/link-format'
+
 
 EXTENSIONS_PATH = 'core/extensions/'
 

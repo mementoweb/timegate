@@ -4,10 +4,11 @@ import importlib
 import inspect
 import glob
 import logging
+import json
 
 import re
 
-from conf.constants import DATEFMT,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT
+from conf.constants import DATEFMT,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON
 from conf.config import CACHE_USE, STRICT_TIME, HOST
 from errors.urierror import URIRequestError
 from errors.timegateerror import TimegateError
@@ -26,7 +27,7 @@ logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.DEBUG)  # DEBUG
 # Builds the mapper from URI regular expression to handler class
 try:
     handlers_ct = 0
-    tgate_mapper = [] #TODO merge those
+    tgate_mapper = []  # TODO merge those
     tmap_mapper = []
     # Finds every python files in the extensions folder and imports it
     files = glob.glob(EXTENSIONS_PATH+"*.py")
@@ -79,8 +80,9 @@ def application(env, start_response):
     req_path = env.get('PATH_INFO', '/')
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
     req_met = env.get('REQUEST_METHOD')
-    logging.info("Incoming request: %s %s Accept-Datetime: %s" % (
-                 req_met, req_path, req_datetime))
+    req_mime = env.get('HTTP_ACCEPT')
+    logging.info("Incoming request: %s %s, Accept-Datetime: %s, Accept: %s" % (
+                 req_met, req_path, req_datetime, req_mime))
 
     # Standard response header
     headers = [('Content-Type', 'text/html')]
@@ -106,7 +108,7 @@ def application(env, start_response):
     # Serving TimeMap Request
     elif req_type == TIMEMAPSTR:
         try:
-            return timemap(req_path, start_response)
+            return timemap(req_path, req_mime, start_response)
         except TimegateError as e:
             return resperror(e.status, e.message,
                              start_response, headers)
@@ -170,7 +172,7 @@ def respmemento(uri_m, uri_r, start_response, singleonly=False):
     return body
 
 
-def resptimemap(mementos, uri_r, start_response):
+def create_tm_link(mementos, uri_r, start_response):
     """
     Creates and sends a timemap response.
     :param mementos: A list of (uri_str, datetime_obj) tuples representing a timemap
@@ -202,10 +204,10 @@ def resptimemap(mementos, uri_r, start_response):
             elif date > last_date:
                 last_date = date
                 last_url = urlstr
-
             linkstr = '<%s>; rel="memento"; datetime="%s"' % (
                 urlstr, date_str(date))
             mementos_links.append(linkstr)
+
         first_datestr = first_date.strftime(DATEFMT)
         last_datestr = last_date.strftime(DATEFMT)
         firstlink = '<%s>; rel="first memento"; datetime="%s"' % (
@@ -216,9 +218,10 @@ def resptimemap(mementos, uri_r, start_response):
         mementos_links.insert(0, firstlink)
         self_link = '%s; from="%s"; until="%s"' % (
             self_link, first_datestr, last_datestr)
+
     # Aggregates all link strings and constructs the TimeMap body
     links = [original_link, timegate_link, self_link]
-    links.extend(mementos_links) # TODO modularizer ca...
+    links.extend(mementos_links)  # TODO modularizer ca...
     body = ',\n'.join(links) + '\n'
 
     # Builds HTTP Response and WSGI return
@@ -229,7 +232,68 @@ def resptimemap(mementos, uri_r, start_response):
         ('Content-Type', 'application/link-format'),
         ('Connection', 'close')]
     start_response(HTTP_STATUS[status], headers)
-    logging.info("Returning %d, TimeMap of size %d for URI-R=%s" %
+    logging.info("Returning %d, LINK TimeMap of size %d for URI-R=%s" %
+                 (status, len(mementos), uri_r))
+    return [body]
+
+def create_tm_json(mementos, uri_r, start_response):
+    """
+    Creates and sends a timemap response.
+    :param mementos: A list of (uri_str, datetime_obj) tuples representing a timemap
+    :param uri_r: The URI-R of the original resource
+    :param start_response: WSGI callback function
+    :return: The HTTP body as a list of one element
+    """
+    # TODO clean and docstring
+    ret = {}
+
+    ret['original_uri'] = uri_r
+    ret['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATESTR, uri_r)
+    ret['timemap_uri'] = '%s/%s/%s' % (HOST, TIMEMAPSTR, uri_r)
+
+    # Browse through Mementos to find the first and the last
+    # Generates TimeMap links list in the process
+    mementos_links = []
+    if mementos:
+        first_url = mementos[0][0]
+        first_date = mementos[0][1]
+        last_url = mementos[0][0]
+        last_date = mementos[0][1]
+
+        for (urlstr, date) in mementos:
+            if date < first_date:
+                first_date = date
+                first_url = urlstr
+            elif date > last_date:
+                last_date = date
+                last_url = urlstr
+            linkstr = {'memento': urlstr,
+                       'datetime': date_str(date)}
+            mementos_links.append(linkstr)
+
+        first_datestr = first_date.strftime(DATEFMT)
+        last_datestr = last_date.strftime(DATEFMT)
+        firstlink = {'memento': first_url,
+                     'datetime': first_datestr}
+        lastlink = {'memento': last_url,
+                    'datetime': last_datestr}
+        ret['from'] = first_datestr
+        ret['until'] = last_datestr
+        ret['mementos'] = {'last': firstlink,
+                           'first': lastlink,
+                           'all': mementos_links}
+
+    body = json.dumps(ret)
+
+    # Builds HTTP Response and WSGI return
+    status = 200
+    headers = [
+        ('Date', nowstr()),  # TODO check timezone
+        ('Content-Length', str(len(body))),
+        ('Content-Type', 'application/json'),
+        ('Connection', 'close')]
+    start_response(HTTP_STATUS[status], headers)
+    logging.info("Returning %d, JSON TimeMap of size %d for URI-R=%s" %
                  (status, len(mementos), uri_r))
     return [body]
 
@@ -297,7 +361,7 @@ def timegate(req_path, start_response, req_datetime):
     return respmemento(memento, uri_r, start_response, handler.singleonly)
 
 
-def timemap(req_path, start_response):
+def timemap(req_path, req_mime, start_response):
     """
     Handles TimeMap high-level logic. Fetches all Mementos for an Original
     Resource and builds the TimeMap response. Returns a HTTP 200 response if it
@@ -313,4 +377,7 @@ def timemap(req_path, start_response):
     # Query the cache for a timemap not older than cache tolerance.
     mementos = cache.get_all(uri_r, handler.getall, uri_r)
     # Generates the TimeMap response body and Headers
-    return resptimemap(mementos, uri_r, start_response)
+    if req_mime.startswith(MIME_JSON):
+        return create_tm_json(mementos, uri_r, start_response)
+    else:  # TODO define default (crash / link)
+        return create_tm_link(mementos, uri_r, start_response)
