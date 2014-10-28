@@ -13,7 +13,7 @@ from errors.urierror import URIRequestError
 from errors.timegateerror import TimegateError
 from core.cache import Cache
 from core.handler import validate_response
-from tgutils import nowstr, validate_req_datetime, validate_req_uri, closest, date_str
+from tgutils import nowstr, validate_req_datetime, validate_req_uri, closest, date_str, now
 
 
 # Initialization code
@@ -277,7 +277,10 @@ def timegate(req_path, start_response, req_datetime):
     """
 
     # Parses the date time and original resoure URI
-    accept_datetime = validate_req_datetime(req_datetime, STRICT_TIME)
+    if req_datetime is None or req_datetime == '':
+        accept_datetime = now()
+    else:
+        accept_datetime = validate_req_datetime(req_datetime, STRICT_TIME)
     uri_r = validate_req_uri(req_path, TIMEGATESTR)
     # Dynamically loads the handler for that resource
     handler = loadhandler(uri_r, True)

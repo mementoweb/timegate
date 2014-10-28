@@ -15,16 +15,12 @@ from errors.dateerror import DateTimeError
 def validate_req_datetime(datestr, strict=True):
     """
     Parses the requested date string into a dateutil time object.
-    Returns a representation of now() if the date is empty.
-    Raises DateTimeError if the parse fails to produce a datetime from a non
-    empty datestring.
+    Raises DateTimeError if the parse fails to produce a datetime
     :param datestr: A date string, in a common format.
     :param strict: If the datetime MUST follow the exact format DATEFMT
     :return: the dateutil time object
     """
-    if not datestr or datestr == '':
-        logging.debug("No Accept-Datetime provided. Returning now().")
-        return now()
+    
     try:
         if strict:
             date = datetime.strptime(datestr, DATEFMT)
