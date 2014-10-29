@@ -20,4 +20,4 @@ CACHE_FILE = 'core/cache_data'
 CACHE_RWLOCK = 'core/cache_rwlock'
 CACHE_DLOCK = 'core/cache_dogpilelock'
 
-SINGLE_HANDLER = True
+SINGLE_HANDLER = False

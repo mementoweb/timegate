@@ -14,8 +14,8 @@ files (github.com/:user/:repo/blob/:path)
 and raw files (raw.githubusercontent.com/:user/:repo/master/:path)
 """
 
-class GitHubHandler(Handler):
 
+class GitHubHandler(Handler):
 
     def __init__(self):
         # Mandatory fields

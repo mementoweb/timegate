@@ -6,6 +6,8 @@ __author__ = 'Yorick Chollet'
 from core.handler import Handler
 from errors.handlererror import HandlerError
 
+from tgutils import date_str
+
 
 class WikiHandler(Handler):
 
@@ -13,20 +15,34 @@ class WikiHandler(Handler):
     def __init__(self):
         # Mandatory fields
         self.resources = ['https?://[a-z]{2,3}.wikipedia.org/wiki/.+']
+        self.TIMESTAMPFMT = '%Y%m%d%H%M%S'
 
         # Local fields, the uri pattern of a resource
         uri_re = '(.+)(/wiki/)(.+)'
         self.rex = re.compile(uri_re)
 
-
-    # This example requires the datetime
-    def getone(self, uri, datetime):
-        # TODO this to lower the API requests
-        raise NotImplementedError
-
-
-    # This example requires the datetime
     def getall(self, uri):
+        params = {
+            'rvlimit': 500,  # Max allowed
+            'continue': ''  # The initial continue value is empty
+        }
+
+        return self.query(uri, params)
+
+    # This example requires the datetime
+    def getone(self, uri, accept_datetime):
+        timestamp = date_str(accept_datetime, self.TIMESTAMPFMT)
+        params = {
+            'rvlimit': 1,  # Only need one
+            'rvstart': timestamp,  # Start listing from here
+            'rvdir': 'older'  # List in decreasing order
+        }
+
+        return self.query(uri, params)
+
+        #TODO API response if undefined.
+
+    def query(self, uri, req_params):
         match = self.rex.match(uri)
         assert bool(match)
 
@@ -40,19 +56,17 @@ class WikiHandler(Handler):
             'format': 'json',
             'prop': 'revisions',
             'rvprop': 'ids|timestamp',
-            'rvlimit': 500,  # Max allowed is 500
             'indexpageids': '',
             'titles': resource
         }
-        cont = {'continue': ''}  # The initial continue value is empty
+        params.update(req_params)
 
         # Does sequential queries to get all revisions IDs and Timestamps
         queries_results = []
-        while cont is not None:
+        condition = True
+        while condition:
             # Clone original request
             newparams = params.copy()
-            # Modify it with the values returned in the 'continue' section of the last result.
-            newparams.update(cont)
             req = self.request(apibase, params=newparams)
             if req.status_code == 404:
                 raise HandlerError("Cannot find resource on version server.", 404)
@@ -74,8 +88,11 @@ class WikiHandler(Handler):
                 # The response was truncated, the rest can be obtained using
                 # &rvcontinue=ID
                 cont = result['continue']
+                # Modify it with the values returned in the 'continue' section of the last result.
+                newparams.update(cont)
+                condition = True
             else:
-                cont = None
+                condition = False
 
         # Processing list
         def f(rev):
@@ -83,7 +100,6 @@ class WikiHandler(Handler):
                 resource, rev['revid'])
             dt = rev['timestamp']
             return (rev_uri, dt)
+        logging.debug("Returning API results of size %d" % len(queries_results))
 
         return map(f, queries_results)
-
-        #TODO API response if undefined.

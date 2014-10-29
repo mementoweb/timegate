@@ -402,11 +402,11 @@ def timegate(req_path, start_response, req_datetime):
         mementos = cache.get_until(uri_r, accept_datetime)
         if mementos is None:
             if hasattr(handler, 'getone'):
-                mementos = validate_response(handler.getone(uri_r, accept_datetime))
+                (uri, mementos) = validate_response(handler.getone(uri_r, accept_datetime))
             else:
                 mementos = cache.refresh(uri_r, handler.getall, uri_r)
     elif hasattr(handler, 'getone'):
-        mementos = validate_response(handler.getone(uri_r, accept_datetime))
+        (uri, mementos) = validate_response(handler.getone(uri_r, accept_datetime))
     else:
         raise TimegateError("NotImplementedError: Handler has neither getone nor getall function.", 503)  # TODO put in const
     assert mementos
