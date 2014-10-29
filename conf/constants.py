@@ -28,6 +28,8 @@ MIME_JSON = 'application/json'
 
 MIME_LINK = 'application/link-format'
 
+JSONSTR = 'json'
+LINKSTR = 'link'
 
 EXTENSIONS_PATH = 'core/extensions/'
 

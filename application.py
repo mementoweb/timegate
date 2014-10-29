@@ -8,7 +8,7 @@ import json
 
 import re
 
-from conf.constants import DATEFMT,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON
+from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON
 from conf.config import CACHE_USE, STRICT_TIME, HOST
 from errors.urierror import URIRequestError
 from errors.timegateerror import TimegateError
@@ -77,12 +77,12 @@ def application(env, start_response):
     """
 
     # Extracting requested values
-    req_path = env.get('PATH_INFO', '/')
+    req = env.get('PATH_INFO', '/')
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
     req_met = env.get('REQUEST_METHOD')
     req_mime = env.get('HTTP_ACCEPT')
     logging.info("Incoming request: %s %s, Accept-Datetime: %s, Accept: %s" % (
-                 req_met, req_path, req_datetime, req_mime))
+                 req_met, req, req_datetime, req_mime))
 
     # Standard response header
     headers = [('Content-Type', 'text/html')]
@@ -94,12 +94,14 @@ def application(env, start_response):
         return resperror(status, message, start_response, headers)
 
     # Processing request service type and path
-    req_path = req_path.lstrip('/')
-    req_type = req_path.split('/', 1)[0]
+    req = req.lstrip('/')
+    req_type = req.split('/', 1)[0]
 
     # Serving TimeGate Request
     if req_type == TIMEGATESTR:
         try:
+            #removes leading 'TIMEGATESTR/'
+            req_path = req.split('/', 1)[1]
             return timegate(req_path, start_response, req_datetime)
         except TimegateError as e:
             return resperror(e.status, e.message,
@@ -108,6 +110,10 @@ def application(env, start_response):
     # Serving TimeMap Request
     elif req_type == TIMEMAPSTR:
         try:
+            # gets the method (JSON or LINK)
+            req_mime = req.split('/', 2)[1]
+            #removes leading 'TIMEMAPSTR/MIME_TYPE/'
+            req_path = req.split('/', 2)[2]
             return timemap(req_path, req_mime, start_response)
         except TimegateError as e:
             return resperror(e.status, e.message,
@@ -148,9 +154,12 @@ def respmemento(uri_m, uri_r, start_response, singleonly=False):
 
     linkheaderval = '<%s>; rel="original"' % uri_r
     if not singleonly:
-        timemaplink = '%s/%s/%s' % (HOST, TIMEMAPSTR, uri_r)
+        timemap_link = '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, uri_r)
+        timemap_json = '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, uri_r)
         linkheaderval += ', <%s>; rel="timemap";' \
-                         ' type="application/link-format"' % timemaplink
+                         ' type="application/link-format"' % timemap_link
+        linkheaderval += ', <%s>; rel="timemap";' \
+                         ' type="application/json"' % timemap_json
 
     linkheaderval = linkheaderval
 
@@ -185,8 +194,10 @@ def create_tm_link(mementos, uri_r, start_response):
     original_link = '<%s>; rel="original"' % uri_r
     timegate_link = '<%s/%s/%s>; rel="timegate"' % (
         HOST, TIMEGATESTR, uri_r)
-    self_link = '<%s/%s/%s>; rel="self"; type="application/link-format"' % (
-        HOST, TIMEMAPSTR, uri_r)
+    self_link = '<%s/%s/%s/%s>; rel="self"; type="application/link-format"' % (
+        HOST, TIMEMAPSTR, LINKSTR, uri_r)
+    other_link = '<%s/%s/%s/%s>; rel="self"; type="application/json"' % (
+        HOST, TIMEMAPSTR, JSONSTR, uri_r)
 
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
@@ -218,9 +229,11 @@ def create_tm_link(mementos, uri_r, start_response):
         mementos_links.insert(0, firstlink)
         self_link = '%s; from="%s"; until="%s"' % (
             self_link, first_datestr, last_datestr)
+        other_link = '%s; from="%s"; until="%s"' % (
+            other_link, first_datestr, last_datestr)
 
     # Aggregates all link strings and constructs the TimeMap body
-    links = [original_link, timegate_link, self_link]
+    links = [original_link, timegate_link, self_link, other_link]
     links.extend(mementos_links)  # TODO modularizer ca...
     body = ',\n'.join(links) + '\n'
 
@@ -249,7 +262,10 @@ def create_tm_json(mementos, uri_r, start_response):
 
     ret['original_uri'] = uri_r
     ret['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATESTR, uri_r)
-    ret['timemap_uri'] = '%s/%s/%s' % (HOST, TIMEMAPSTR, uri_r)
+    ret['timemap_uri'] = {
+        'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, uri_r),
+        'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, uri_r)
+    }
 
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
@@ -345,7 +361,7 @@ def timegate(req_path, start_response, req_datetime):
         accept_datetime = now()
     else:
         accept_datetime = validate_req_datetime(req_datetime, STRICT_TIME)
-    uri_r = validate_req_uri(req_path, TIMEGATESTR)
+    uri_r = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource
     handler = loadhandler(uri_r, True)
     # Runs the handler's API request for the Memento
@@ -371,13 +387,17 @@ def timemap(req_path, req_mime, start_response):
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
-    uri_r = validate_req_uri(req_path, TIMEMAPSTR)
+    if not (req_mime == JSONSTR or req_mime == LINKSTR):
+        raise URIRequestError('Mime type (%s) unknown. must be %s or %s'
+                              % (req_mime, JSONSTR, LINKSTR), 400)
+
+    uri_r = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource.
     handler = loadhandler(uri_r, False)
     # Query the cache for a timemap not older than cache tolerance.
     mementos = cache.get_all(uri_r, handler.getall, uri_r)
     # Generates the TimeMap response body and Headers
-    if req_mime.startswith(MIME_JSON):
+    if req_mime.startswith(JSONSTR):
         return create_tm_json(mementos, uri_r, start_response)
     else:  # TODO define default (crash / link)
         return create_tm_link(mementos, uri_r, start_response)

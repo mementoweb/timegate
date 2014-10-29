@@ -31,7 +31,7 @@ class AWOIAFHandler(Handler):
         match = self.rex.match(uri)
         assert bool(match)
 
-        base = match.groups()[0]   # TODO parametrize 
+        base = match.groups()[0]   # TODO parametrize
         resource = match.groups()[2]  # Note that anchors can be included
 
         # Mediawiki API parameters
