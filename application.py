@@ -9,7 +9,7 @@ import json
 import re
 
 from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON
-from conf.config import CACHE_USE, STRICT_TIME, HOST
+from conf.config import CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER
 from errors.urierror import URIRequestError
 from errors.timegateerror import TimegateError
 from core.cache import Cache
@@ -25,6 +25,7 @@ logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.DEBUG)  # DEBUG
 # logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
 # Builds the mapper from URI regular expression to handler class
+'''
 try:
     handlers_ct = 0
     tgate_mapper = []  # TODO merge those
@@ -48,13 +49,49 @@ try:
                 handlers_ct += 1
                 for regex in handler.resources:
                     # Compiles the regex and maps it to the handler python class
-                    tgate_mapper.append((re.compile(regex), handler_class))
-                    if not handler.singleonly:
+                    if handler.single_requests:
+                        tgate_mapper.append((re.compile(regex), handler_class))
+                    if handler.batch_requests:
                         tmap_mapper.append((re.compile(regex), handler_class))
     logging.info("Loaded %d handlers for %d regular expressions URI." % (
                  handlers_ct, len(tgate_mapper)))
+     '''
+
+handlers_ct = 0
+api_handler = None
+mapper = []
+
+try:
+    # Finds every python files in the extensions folder and imports it
+    files = glob.glob(EXTENSIONS_PATH+"*.py")
+    for fname in files:
+        basename = fname[len(EXTENSIONS_PATH):-3]
+        modpath = EXTENSIONS_PATH.replace('/', '.')+basename
+        module = importlib.import_module(modpath)
+        # Finds all python classnames within the file
+        mod_members = inspect.getmembers(module, inspect.isclass)
+        for (name, path) in mod_members:
+            # If the class was not imported, extract the classname
+            if str(path) == (modpath + '.' + name):
+                classname = name
+                # Get the python class object from the classname and module
+                handler_class = getattr(module, classname)
+                # Extract all URI regular expressions that the handlers manages
+                api_handler = handler_class()
+                logging.info("Found handler %s" % classname)
+                handlers_ct += 1
+                if SINGLE_HANDLER and handlers_ct > 1:
+                    raise Exception("More than one python class file"
+                                    " in handler directory found. ")
+                else:
+                    for regex in api_handler.resources:
+                        # Compiles the regex and maps it to the handler python class
+                        mapper.append((re.compile(regex), api_handler))
+    logging.info("Loaded %d handlers for %d regular expressions URI." % (
+                handlers_ct, len(mapper)))
+
 except Exception as e:
-    logging.debug("Exception during handler loading.")
+    logging.debug("Exception during handler loading: %s" % e.message)
     raise Exception("Fatal Error loading handlers: %s" % e.message)
 
 # Cache loading
@@ -141,7 +178,7 @@ def resperror(status, message, start_response, headers):
     return body
 
 
-def respmemento(uri_m, uri_r, start_response, singleonly=False):
+def respmemento(uri_m, uri_r, start_response, batch_requests=True):
     """
     Returns a 302 redirection to the best Memento
     for a resource and a datetime requested by the user.
@@ -153,7 +190,7 @@ def respmemento(uri_m, uri_r, start_response, singleonly=False):
     #TODO encoding response as utf8 ?!?
 
     linkheaderval = '<%s>; rel="original"' % uri_r
-    if not singleonly:
+    if batch_requests:
         timemap_link = '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, uri_r)
         timemap_json = '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, uri_r)
         linkheaderval += ', <%s>; rel="timemap";' \
@@ -314,34 +351,29 @@ def create_tm_json(mementos, uri_r, start_response):
     return [body]
 
 
-def loadhandler(uri, singlerequest=False):
+def loadhandler(uri):
     """
     Loads the first handler for the requested URI if it exists.
     :param uri: The URI to match to a handler
     :param singlerequest: Boolean indicating if the requests is for a single
-    memento or for a timemap. If False (default), then the handler MUST allow
+    memento (true) or for a timemap (false). If False (default), then the handler MUST allow
     batch requests.
     :return: the handler object
     Raises URIRequestError if no handler matches this URI
     """
 
-    if singlerequest:
-        mapper = tgate_mapper
-        method = 'timegate'
+    if SINGLE_HANDLER:
+        return api_handler
     else:
-        mapper = tmap_mapper
-        method = 'timemap'
+        #Finds the first handler which regex match with the requested URI-R
+        for (regex, handler) in mapper:
+            if bool(regex.match(uri)):
+                logging.debug("%s matched pattern %s of handler %s" % (uri, regex.pattern, handler))
+                return handler
 
-    #TODO define what to do if multiple matches
-    #Finds the first handler which regex match with the requested URI-R
-    for (regex, handler) in mapper:
-        if bool(regex.match(uri)):
-            logging.debug("%s matched pattern %s of handler %s" %
-                          (uri, regex.pattern, handler))
-            return handler()
+    raise URIRequestError('Cannot find any handler for %s' % uri, 404)
 
-    raise URIRequestError('Cannot find any %s handler for %s' %
-                          (method, uri), 404)
+
 
 
 def timegate(req_path, start_response, req_datetime):
@@ -363,18 +395,26 @@ def timegate(req_path, start_response, req_datetime):
         accept_datetime = validate_req_datetime(req_datetime, STRICT_TIME)
     uri_r = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource
-    handler = loadhandler(uri_r, True)
+    handler = loadhandler(uri_r)
+
     # Runs the handler's API request for the Memento
-    if handler.singleonly:
-         # Timemaps do not exist for that handler. No need to check the cache.
+    if hasattr(handler, 'getall'):  # TODO put in const
+        mementos = cache.get_until(uri_r, accept_datetime)
+        if mementos is None:
+            if hasattr(handler, 'getone'):
+                mementos = validate_response(handler.getone(uri_r, accept_datetime))
+            else:
+                mementos = cache.refresh(uri_r, handler.getall, uri_r)
+    elif hasattr(handler, 'getone'):
         mementos = validate_response(handler.getone(uri_r, accept_datetime))
     else:
-        # Query the cache for a timemap old enough
-        mementos = cache.get_until(uri_r, accept_datetime, handler.getall, uri_r)
+        raise TimegateError("NotImplementedError: Handler has neither getone nor getall function.", 503)  # TODO put in const
+    assert mementos
+
     # If the handler returned several Mementos, take the closest
     memento = closest_past(mementos, accept_datetime)
     # Generates the TimeGate response body and Headers
-    return respmemento(memento, uri_r, start_response, handler.singleonly)
+    return respmemento(memento, uri_r, start_response, hasattr(handler, 'getall'))
 
 
 def timemap(req_path, req_mime, start_response):
@@ -393,9 +433,16 @@ def timemap(req_path, req_mime, start_response):
 
     uri_r = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource.
-    handler = loadhandler(uri_r, False)
-    # Query the cache for a timemap not older than cache tolerance.
-    mementos = cache.get_all(uri_r, handler.getall, uri_r)
+    handler = loadhandler(uri_r)
+
+    if hasattr(handler, 'getall'):
+        mementos = cache.get_all(uri_r)
+        if mementos is None:
+            mementos = cache.refresh(uri_r, handler.getall, uri_r)
+    else:
+        raise TimegateError("NotImplementedError: Handler has neither getone nor getall function.", 503)  # TODO put in const
+    assert mementos
+
     # Generates the TimeMap response body and Headers
     if req_mime.startswith(JSONSTR):
         return create_tm_json(mementos, uri_r, start_response)

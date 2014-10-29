@@ -21,7 +21,6 @@ class GitHubHandler(Handler):
         # Mandatory fields
         self.resources = ['https://github.com/.+',
                           'https://raw.githubusercontent.com/']
-        self.singleonly = False
 
         # Local fields
         self.api = 'https://api.github.com'
@@ -140,9 +139,3 @@ class GitHubHandler(Handler):
             # No results found
             raise HandlerError("Resource not found, empty response from API",
                                404)
-
-    # This example requires the datetime
-    def getone(self, uri, datetime):
-        # TODO this to lower the API requests
-        raise NotImplementedError
-

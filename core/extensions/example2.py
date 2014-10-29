@@ -11,8 +11,6 @@ class OtherHandler(Handler):
         self.resources = ['http://www.an\d{1,2}.other.com/',
                           'http://www.another.com/[a-zA-Z0-9]*/']
 
-        self.singleonly = False
-
     def getall(self, uri):
         api_uri = 'http://127.0.0.1:9001/timemap2/'
         req = self.request(uri, api_uri)

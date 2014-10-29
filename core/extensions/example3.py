@@ -9,7 +9,6 @@ class FooHandler(Handler):
     def __init__(self):
 
         self.resources = ['http://www.foo.bar/']
-        self.singleonly = True
 
 
     # This example requires the datetime

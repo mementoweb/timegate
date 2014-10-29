@@ -45,10 +45,10 @@ def validate_req_uri(pathstr):
         # Replacing white spaces
         path = pathstr.replace(' ', '%20')
         # Trying to fix incomplete URI
-        if not bool(HTTPRE.match(path)):
+        # if not bool(HTTPRE.match(path)):
             # if not bool(WWWRE.match(path)):
             #     path = 'www.'+path TODO remove?
-            path = 'http://'+pathstr
+            # path = 'http://'+pathstr
 
         uri = validate_uristr(path)
         logging.debug("Requested URI parsed to: "+uri)

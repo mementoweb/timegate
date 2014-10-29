@@ -13,7 +13,6 @@ class WikiHandler(Handler):
     def __init__(self):
         # Mandatory fields
         self.resources = ['https?://[a-z]{2,3}.wikipedia.org/wiki/.+']
-        self.singleonly = False
 
         # Local fields, the uri pattern of a resource
         uri_re = '(.+)(/wiki/)(.+)'

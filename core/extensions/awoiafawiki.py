@@ -13,17 +13,12 @@ class AWOIAFHandler(Handler):
     def __init__(self):
         # Mandatory fields
         self.resources = ['http://awoiaf.westeros.org/index.php/.+']  # TODO parametrize
-        self.singleonly = False
+        self.single_requests = False
+        self.batch_requests = True
 
         # Local fields, the uri pattern of a resource
         uri_re = '(.+)(/index.php/)(.+)'  # TODO parametrize
         self.rex = re.compile(uri_re)
-
-
-    # This example requires the datetime
-    def getone(self, uri, datetime):
-        # TODO this to lower the API requests
-        raise NotImplementedError
 
 
     # This example requires the datetime

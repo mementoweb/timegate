@@ -36,8 +36,8 @@ class Cache:
         )
         logging.info("Cached started: cache file: %s, cache expiration: %d seconds, cache tolerance: %d seconds" % (CACHE_FILE, CACHE_EXP, CACHE_TOLERANCE))
 
-    def get_until(self, uri_r, date, getter, *args, **kwargs):
-        """
+    def get_until(self, uri_r, date):
+        """ # TODO recomment
         Returns the timemap (memento,datetime)-list for the requested memento.
         The timemap is garanteed to span at least until the 'date' parameter,
         within the tolerance.
@@ -53,8 +53,7 @@ class Cache:
 
         # Cache MISS if not enabled
         if not self.enabled:
-            (uri, timemap) = validate_response(getter(*args, **kwargs))
-            return timemap
+            return None
 
         # Query the backend for stored cache values to that memento
         try:
@@ -62,36 +61,24 @@ class Cache:
         except Exception as e:
             raise CacheError("Exception loading cache content: %s" % e.message)
 
-        # The cache value and timestamp at which it was generated.
-        timemap = None
-        timetamp = 0
-
         if val:
             # There is a value in the cache
             timetamp = val[0]
             timemap = val[1]
             logging.info("Cached value exists for %s" % uri_r)
+            if date > timetamp + self.tolerance:
+                logging.info("Cache MISS: value outdated for %s" % uri_r)
+                timemap = None
+            else:
+                logging.info("Cache HIT: found value for %s" % uri_r)
         else:
             # Cache MISS: No value
-            logging.info("No cached value for %s" % uri_r)
-
-        if not self.enabled or not val or date > timetamp + self.tolerance:
-            # Cache MISS: No value or outdated or not enabled
-            try:
-                # Requests the data
-                (uri, timemap) = validate_response(getter(*args, **kwargs))
-            except HandlerError as he:
-                raise he
-            except Exception as e:
-                raise HandlerError("Error getting and parsing handler response: %s" % e.message)
-
-            if self.enabled:
-                # Creates or refreshes the new timemap for that URI-R
-                self.set(uri_r, timemap)
+            logging.info("Cache MISS: No cached value for %s" % uri_r)
+            timemap = None
 
         return timemap
 
-    def get_all(self, uri_r, getter, *args, **kwargs):
+    def get_all(self, uri_r):
         """
         Request the whole timemap for that uri
         :param uri_r: the URI-R of the resource
@@ -102,7 +89,20 @@ class Cache:
         """
         # No way to know if table is new other than retrieve one.
         # Hope to retrieve in the tolerance delta.
-        return self.get_until(uri_r, tgutils.now(), getter, *args, **kwargs)
+        return self.get_until(uri_r, tgutils.now())
+
+    def refresh(self, uri_r, getter, *args, **kwargs):
+        try:
+            # Requests the data
+            (uri, timemap) = validate_response(getter(*args, **kwargs))
+        except HandlerError as he:
+            raise he
+        except Exception as e:
+            raise HandlerError("Error getting and parsing handler response: %s" % e.message)
+        if self.enabled:
+            # Creates or refreshes the new timemap for that URI-R
+            self.set(uri_r, timemap)
+        return timemap
 
     def set(self, uri_r, timemap):
         """

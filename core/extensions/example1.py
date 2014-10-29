@@ -13,9 +13,6 @@ class ExampleHandler(Handler):
         self.resources = ['https?://www.example.com/',
                           'https?://archive.example.com/resource/']
 
-        # Boolean indicating if the handler can only request one Memento at a time
-        self.singleonly = False
-
     def getall(self, uri):
         """
         Handler get method.

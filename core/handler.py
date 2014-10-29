@@ -12,8 +12,6 @@ class Handler:
 
     # List of regex strings for the original resources that the handler manages
     resources = []
-    # Boolean indicating if the handler can only request one Memento at a time
-    singleonly = False
 
     # Disables all 'requests' module event logs that are at least not WARNINGS
     logging.getLogger('requests').setLevel(logging.WARNING)
@@ -22,26 +20,26 @@ class Handler:
     def __init__(self):
         raise NotImplementedError
 
-    def getone(self, uri_r, datetime):
-        """
-        Requests one Memento for a resource and a datetime
-
-        :param uri_r: the generic URI of the resource
-        :param datetime: Optional datetime to target specific Mementos as a dateutil object
-        :return: 2-Array of tuples (URI, Datetime) where Datetime = None for the
-        original resource generic URI.
-        """
-        raise NotImplementedError
-
-    def getall(self, uri_r):
-        """
-        Requests the mementos for a resource.
-
-        :param uri_r: the generic URI of the resource
-        :return: Array of tuples (URI, Datetime) where Datetime = None for the
-        original resource generic URI.
-        """
-        raise NotImplementedError
+    # def getone(self, uri_r, datetime):
+    #     """
+    #     Requests one Memento for a resource and a datetime
+    #
+    #     :param uri_r: the generic URI of the resource
+    #     :param datetime: Optional datetime to target specific Mementos as a dateutil object
+    #     :return: 2-Array of tuples (URI, Datetime) where Datetime = None for the
+    #     original resource generic URI.
+    #     """
+    #     raise NotImplementedError
+    #
+    # def getall(self, uri_r):
+    #     """
+    #     Requests the mementos for a resource.
+    #
+    #     :param uri_r: the generic URI of the resource
+    #     :return: Array of tuples (URI, Datetime) where Datetime = None for the
+    #     original resource generic URI.
+    #     """
+    #     raise NotImplementedError
 
 
     def request(self, resource, host="", **kwargs):
