@@ -6,17 +6,18 @@ __author__ = 'Yorick Chollet'
 from core.extensions.mediawiki import MediaWikiHandler
 from errors.handlererror import HandlerError
 
+from tgutils import date_str
 
-class AWOIAFHandler(MediaWikiHandler):
+
+class WikipediaHandler(MediaWikiHandler):
 
 
     def __init__(self):
         MediaWikiHandler.__init__(self)
         # Mandatory fields
-        self.resources = ['http://awoiaf.westeros.org/index.php/.+']
-
+        self.resources = ['https?://[a-z]{2,3}.wikipedia.org/wiki/.+']
         # Local fields, the uri pattern of a resource
-        self.rex = re.compile('(.+)(/index.php/)(.+)')
+        self.rex = re.compile('(.+)(/wiki/)(.+)')
 
-        self.api_part = '/api.php'
-        self.mementos_part = '/index.php'
+        self.api_part = '/w/api.php'
+        self.mementos_part = '/w/index.php'

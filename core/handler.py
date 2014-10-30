@@ -18,7 +18,7 @@ class Handler:
 
 
     def __init__(self):
-        raise NotImplementedError
+        pass
 
     # def getone(self, uri_r, datetime):
     #     """

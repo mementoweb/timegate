@@ -9,17 +9,12 @@ from errors.handlererror import HandlerError
 from tgutils import date_str
 
 
-class WikiHandler(Handler):
+class MediaWikiHandler(Handler):
 
 
     def __init__(self):
-        # Mandatory fields
-        self.resources = ['https?://[a-z]{2,3}.wikipedia.org/wiki/.+']
+        Handler.__init__(self)
         self.TIMESTAMPFMT = '%Y%m%d%H%M%S'
-
-        # Local fields, the uri pattern of a resource
-        uri_re = '(.+)(/wiki/)(.+)'
-        self.rex = re.compile(uri_re)
 
     def getall(self, uri):
         params = {
@@ -50,7 +45,7 @@ class WikiHandler(Handler):
         resource = match.groups()[2]  # Note that anchors can be included
 
         # Mediawiki API parameters
-        apibase = base+'/w/api.php'
+        apibase = base+self.api_part
         params = {
             'action': 'query',
             'format': 'json',
@@ -96,7 +91,7 @@ class WikiHandler(Handler):
 
         # Processing list
         def f(rev):
-            rev_uri = base + '/w/index.php?title=%s&oldid=%d' % (
+            rev_uri = base + self.mementos_part + '?title=%s&oldid=%d' % (
                 resource, rev['revid'])
             dt = rev['timestamp']
             return (rev_uri, dt)

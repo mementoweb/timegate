@@ -61,38 +61,38 @@ handlers_ct = 0
 api_handler = None
 mapper = []
 
-try:
-    # Finds every python files in the extensions folder and imports it
-    files = glob.glob(EXTENSIONS_PATH+"*.py")
-    for fname in files:
-        basename = fname[len(EXTENSIONS_PATH):-3]
-        modpath = EXTENSIONS_PATH.replace('/', '.')+basename
-        module = importlib.import_module(modpath)
-        # Finds all python classnames within the file
-        mod_members = inspect.getmembers(module, inspect.isclass)
-        for (name, path) in mod_members:
-            # If the class was not imported, extract the classname
-            if str(path) == (modpath + '.' + name):
-                classname = name
-                # Get the python class object from the classname and module
-                handler_class = getattr(module, classname)
-                # Extract all URI regular expressions that the handlers manages
-                api_handler = handler_class()
-                logging.info("Found handler %s" % classname)
-                handlers_ct += 1
-                if SINGLE_HANDLER and handlers_ct > 1:
-                    raise Exception("More than one python class file"
-                                    " in handler directory found. ")
-                else:
-                    for regex in api_handler.resources:
-                        # Compiles the regex and maps it to the handler python class
-                        mapper.append((re.compile(regex), api_handler))
-    logging.info("Loaded %d handlers for %d regular expressions URI." % (
-                handlers_ct, len(mapper)))
-
-except Exception as e:
-    logging.debug("Exception during handler loading: %s" % e.message)
-    raise Exception("Fatal Error loading handlers: %s" % e.message)
+# try:
+# Finds every python files in the extensions folder and imports it
+files = glob.glob(EXTENSIONS_PATH+"*.py")
+for fname in files:
+    basename = fname[len(EXTENSIONS_PATH):-3]
+    modpath = EXTENSIONS_PATH.replace('/', '.')+basename
+    module = importlib.import_module(modpath)
+    # Finds all python classnames within the file
+    mod_members = inspect.getmembers(module, inspect.isclass)
+    for (name, path) in mod_members:
+        # If the class was not imported, extract the classname
+        if str(path) == (modpath + '.' + name):
+            classname = name
+            # Get the python class object from the classname and module
+            handler_class = getattr(module, classname)
+            # Extract all URI regular expressions that the handlers manages
+            api_handler = handler_class()
+            logging.info("Found handler %s" % classname)
+            handlers_ct += 1
+            if SINGLE_HANDLER and handlers_ct > 1:
+                raise Exception("More than one python class file"
+                                " in handler directory found. ")
+            else:
+                for regex in api_handler.resources:
+                    # Compiles the regex and maps it to the handler python class
+                    mapper.append((re.compile(regex), api_handler))
+logging.info("Loaded %d handlers for %d regular expressions URI." % (
+            handlers_ct, len(mapper)))
+#
+# except Exception as e:
+#     logging.debug("Exception during handler loading: %s" % e.message)
+#     raise Exception("Fatal Error loading handlers: %s" % e.message)
 
 # Cache loading
 try:
