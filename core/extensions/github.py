@@ -18,9 +18,12 @@ and raw files (raw.githubusercontent.com/:user/:repo/master/:path)
 class GitHubHandler(Handler):
 
     def __init__(self):
+        Handler.__init__(self)
         # Mandatory fields
         self.resources = ['https://github.com/.+',
                           'https://raw.githubusercontent.com/']
+
+        self.base = 'https://'
 
         # Local fields
         self.api = 'https://api.github.com'

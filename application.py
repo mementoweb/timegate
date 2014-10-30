@@ -9,12 +9,12 @@ import json
 import re
 
 from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON
-from conf.config import CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER
+from conf.config import CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
 from errors.urierror import URIRequestError
 from errors.timegateerror import TimegateError
 from core.cache import Cache
 from core.handler import validate_response
-from tgutils import nowstr, validate_req_datetime, validate_req_uri, closest, closest_past, date_str, now
+from tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now
 
 
 # Initialization code
@@ -137,9 +137,13 @@ def application(env, start_response):
     # Serving TimeGate Request
     if req_type == TIMEGATESTR:
         try:
-            #removes leading 'TIMEGATESTR/'
-            req_path = req.split('/', 1)[1]
-            return timegate(req_path, start_response, req_datetime)
+            if len(req.split('/', 1)) > 1:
+                #removes leading 'TIMEGATESTR/'
+                req_path = req.split('/', 1)[1]
+                return timegate(req_path, start_response, req_datetime)
+            else:
+                raise TimegateError("Incomplete timegate request. \n"
+                                    "    Syntax: GET /timegate/:resource", 400)
         except TimegateError as e:
             return resperror(e.status, e.message,
                              start_response, headers)
@@ -147,11 +151,15 @@ def application(env, start_response):
     # Serving TimeMap Request
     elif req_type == TIMEMAPSTR:
         try:
-            # gets the method (JSON or LINK)
-            req_mime = req.split('/', 2)[1]
-            #removes leading 'TIMEMAPSTR/MIME_TYPE/'
-            req_path = req.split('/', 2)[2]
-            return timemap(req_path, req_mime, start_response)
+            if len(req.split(('/'), 2)) > 2:
+                # gets the method (JSON or LINK)
+                req_mime = req.split('/', 2)[1]
+                #removes leading 'TIMEMAPSTR/MIME_TYPE/'
+                req_path = req.split('/', 2)[2]
+                return timemap(req_path, req_mime, start_response)
+            else:
+                raise TimegateError("Incomplete timemap request. \n"
+                                    "    Syntax: GET /timemap/:type/:resource", 400)
         except TimegateError as e:
             return resperror(e.status, e.message,
                              start_response, headers)
@@ -363,15 +371,19 @@ def loadhandler(uri):
     """
 
     if SINGLE_HANDLER:
-        return api_handler
+        if not uri.startswith(api_handler.base):
+            uri = api_handler.base + uri
+        return (api_handler, uri)
     else:
         #Finds the first handler which regex match with the requested URI-R
         for (regex, handler) in mapper:
             if bool(regex.match(uri)):
                 logging.debug("%s matched pattern %s of handler %s" % (uri, regex.pattern, handler))
-                return handler
+                if not uri.startswith(handler.base):
+                    uri = handler.base + uri
+                return (handler, uri)
 
-    raise URIRequestError('Cannot find any handler for %s' % uri, 404)
+    raise URIRequestError("Cannot find any handler for '%s'" % uri, 404)
 
 
 
@@ -393,9 +405,10 @@ def timegate(req_path, start_response, req_datetime):
         accept_datetime = now()
     else:
         accept_datetime = validate_req_datetime(req_datetime, STRICT_TIME)
+
     uri_r = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource
-    handler = loadhandler(uri_r)
+    (handler, uri_r) = loadhandler(uri_r)
 
     # Runs the handler's API request for the Memento
     if hasattr(handler, 'getall'):  # TODO put in const
@@ -412,7 +425,7 @@ def timegate(req_path, start_response, req_datetime):
     assert mementos
 
     # If the handler returned several Mementos, take the closest
-    memento = closest_past(mementos, accept_datetime)
+    memento = best(mementos, accept_datetime, RESOURCE_TYPE)
     # Generates the TimeGate response body and Headers
     return respmemento(memento, uri_r, start_response, hasattr(handler, 'getall'))
 
@@ -433,7 +446,7 @@ def timemap(req_path, req_mime, start_response):
 
     uri_r = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource.
-    handler = loadhandler(uri_r)
+    (handler, uri_r) = loadhandler(uri_r)
 
     if hasattr(handler, 'getall'):
         mementos = cache.get_all(uri_r)

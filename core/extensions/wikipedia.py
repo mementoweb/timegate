@@ -1,12 +1,8 @@
 import re
-import logging
 
 __author__ = 'Yorick Chollet'
 
 from core.extensions.mediawiki import MediaWikiHandler
-from errors.handlererror import HandlerError
-
-from tgutils import date_str
 
 
 class WikipediaHandler(MediaWikiHandler):
@@ -18,6 +14,8 @@ class WikipediaHandler(MediaWikiHandler):
         self.resources = ['https?://[a-z]{2,3}.wikipedia.org/wiki/.+']
         # Local fields, the uri pattern of a resource
         self.rex = re.compile('(.+)(/wiki/)(.+)')
+
+        self.base = 'http://'
 
         self.api_part = '/w/api.php'
         self.mementos_part = '/w/index.php'

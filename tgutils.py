@@ -136,8 +136,13 @@ def closest(timemap, accept_datetime, sorted=True):
 
     return memento
 
+def best(timemap, accept_datetime, timemap_type, sorted=True):
+    if timemap_type == 'vcs':
+        return closest_before(timemap, accept_datetime, sorted)
+    else:
+        return closest(timemap, accept_datetime, sorted)
 
-def closest_past(timemap, accept_datetime, sorted=True):
+def closest_before(timemap, accept_datetime, sorted=True):
     """
     Finds the closest memento in the past of a datetime
     :param timemap: A sorted Timemap

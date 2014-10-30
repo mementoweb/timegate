@@ -10,15 +10,14 @@ from errors.handlererror import HandlerError
 
 class Handler:
 
-    # List of regex strings for the original resources that the handler manages
-    resources = []
-
     # Disables all 'requests' module event logs that are at least not WARNINGS
     logging.getLogger('requests').setLevel(logging.WARNING)
 
 
     def __init__(self):
-        pass
+        # List of regex strings for the original resources that the handler manages
+        self.resources = []
+        self.base = None
 
     # def getone(self, uri_r, datetime):
     #     """
