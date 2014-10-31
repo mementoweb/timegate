@@ -98,8 +98,9 @@ logging.info("Loaded %d handlers for %d regular expressions URI." % (
 try:
     cache = Cache(enabled=CACHE_USE)
 except Exception as e:
-    logging.debug("Exception during cache loading.")
-    raise Exception("Fatal Error loading cache: %s" % e.message)
+    logging.debug("Exception during cache loading. Cache deactivated. Check permissions")
+    CACHE_USE = False
+    # raise Exception("Fatal Error loading cache Check permissions: %s" % e.message)
 
 
 logging.info("Application loaded. Host: %s" % HOST)

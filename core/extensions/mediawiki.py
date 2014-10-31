@@ -38,6 +38,8 @@ class MediaWikiHandler(Handler):
         #TODO API response if undefined.
 
     def query(self, uri, req_params):
+        print uri
+
         match = self.rex.match(uri)
         assert bool(match)
 

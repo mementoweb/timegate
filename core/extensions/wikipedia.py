@@ -15,7 +15,7 @@ class WikipediaHandler(MediaWikiHandler):
         # Local fields, the uri pattern of a resource
         self.rex = re.compile('(.+)(/wiki/)(.+)')
 
-        self.base = 'http://'
+        self.base = ''
 
         self.api_part = '/w/api.php'
         self.mementos_part = '/w/index.php'

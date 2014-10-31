@@ -41,7 +41,7 @@ class Handler:
     #     raise NotImplementedError
 
 
-    def request(self, resource, host="", **kwargs):
+    def request(self, resource, **kwargs):
         """
         Handler helper function. Requests the resource at host.
         :param host: The hostname of the API
@@ -49,7 +49,7 @@ class Handler:
         :return: A requests response object
         Raises HandlerError if the requests fails to access the API
         """
-        uri = host + resource
+        uri = resource
 
         # Request logging for debug purposes.
         try:

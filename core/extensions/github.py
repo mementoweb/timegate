@@ -23,7 +23,7 @@ class GitHubHandler(Handler):
         self.resources = ['https://github.com/.+',
                           'https://raw.githubusercontent.com/']
 
-        self.base = 'https://'
+        self.base = ''
 
         # Local fields
         self.api = 'https://api.github.com'
