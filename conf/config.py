@@ -12,7 +12,7 @@ RESOURCE_TYPE = 'vcs'  # so far 'vcs' and 'snapshot'
 # Cache values expire after one day.
 CACHE_EXP = 3600 * 24
 # When False, all cache requests will be cache MISSes
-CACHE_USE = True
+CACHE_USE = False
 # Time window in which the cache value is considered young enough to be valid
 CACHE_TOLERANCE = 3600
 # Cache files paths
