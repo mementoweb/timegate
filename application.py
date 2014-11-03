@@ -73,6 +73,7 @@ except Exception as e:
 
 logging.info("Application loaded. Host: %s" % HOST)
 
+
 def application(env, start_response):
     """
     WSGI application object. This is the start point of the server. Timegate /
@@ -97,7 +98,7 @@ def application(env, start_response):
     if req_met != 'GET' and req_met != 'HEAD':
         status = 405
         message = "Request method '%s' not allowed." % req_met
-        return resperror(status, message, start_response, headers)
+        return error_response(status, message, start_response, headers)
 
     # Processing request service type and path
     req = req.lstrip('/')
@@ -114,7 +115,7 @@ def application(env, start_response):
                 raise TimegateError("Incomplete timegate request. \n"
                                     "    Syntax: GET /timegate/:resource", 400)
         except TimegateError as e:
-            return resperror(e.status, e.message,
+            return error_response(e.status, e.message,
                              start_response, headers)
 
     # Serving TimeMap Request
@@ -130,7 +131,7 @@ def application(env, start_response):
                 raise TimegateError("Incomplete timemap request. \n"
                                     "    Syntax: GET /timemap/:type/:resource", 400)
         except TimegateError as e:
-            return resperror(e.status, e.message,
+            return error_response(e.status, e.message,
                              start_response, headers)
 
     # Unknown Service Request
@@ -138,9 +139,10 @@ def application(env, start_response):
         status = 400
         message = "Service request type '%s' does not match '%s' or '%s'" % (
                   req_type, TIMEMAPSTR, TIMEGATESTR)
-        return resperror(status, message, start_response, headers)
+        return error_response(status, message, start_response, headers)
 
-def resperror(status, message, start_response, headers):
+
+def error_response(status, message, start_response, headers):
     """
     Returns an error message to the user
     :param status: HTTP Status of the error
@@ -155,7 +157,7 @@ def resperror(status, message, start_response, headers):
     return body
 
 
-def respmemento(uri_m, uri_r, start_response, batch_requests=True):
+def memento_response(uri_m, uri_r, start_response, batch_requests=True):
     """
     Returns a 302 redirection to the best Memento
     for a resource and a datetime requested by the user.
@@ -196,7 +198,7 @@ def respmemento(uri_m, uri_r, start_response, batch_requests=True):
     return body
 
 
-def create_tm_link(mementos, uri_r, start_response):
+def timemap_link_response(mementos, uri_r, start_response):
     """
     Creates and sends a timemap response.
     :param mementos: A list of (uri_str, datetime_obj) tuples representing a timemap
@@ -236,12 +238,20 @@ def create_tm_link(mementos, uri_r, start_response):
 
         first_datestr = first_date.strftime(DATEFMT)
         last_datestr = last_date.strftime(DATEFMT)
+
         firstlink = '<%s>; rel="first memento"; datetime="%s"' % (
             first_url, first_datestr)
         lastlink = '<%s>; rel="last memento"; datetime="%s"' % (
             last_url, last_datestr)
-        mementos_links.insert(0, lastlink)
-        mementos_links.insert(0, firstlink)
+
+        if len(mementos_links) == 1:
+            mementos_links[0] = mementos_links[0].replace('rel="memento"', 'rel="first last memento"')
+        else:
+            mementos_links[0] = mementos_links[0].replace('rel="memento"', 'rel="first memento"')
+            mementos_links[-1] = mementos_links[-1].replace('rel="memento"', 'rel="last memento"')
+
+        #mementos_links.insert(0, lastlink)
+        #mementos_links.insert(0, firstlink) #TODO remove
         self_link = '%s; from="%s"; until="%s"' % (
             self_link, first_datestr, last_datestr)
         other_link = '%s; from="%s"; until="%s"' % (
@@ -264,7 +274,8 @@ def create_tm_link(mementos, uri_r, start_response):
                  (status, len(mementos), uri_r))
     return [body]
 
-def create_tm_json(mementos, uri_r, start_response):
+
+def timemap_json_response(mementos, uri_r, start_response):
     """
     Creates and sends a timemap response.
     :param mementos: A list of (uri_str, datetime_obj) tuples representing a timemap
@@ -310,8 +321,8 @@ def create_tm_json(mementos, uri_r, start_response):
                     'datetime': last_datestr}
         ret['from'] = first_datestr
         ret['until'] = last_datestr
-        ret['mementos'] = {'last': firstlink,
-                           'first': lastlink,
+        ret['mementos'] = {'last': lastlink,
+                           'first': firstlink,
                            'all': mementos_links}
 
     body = json.dumps(ret)
@@ -356,8 +367,6 @@ def loadhandler(uri):
     raise URIRequestError("Cannot find any handler for '%s'" % uri, 404)
 
 
-
-
 def timegate(req_path, start_response, req_datetime):
     """
     Handles timegate high-level logic. Fetch the Memento for the requested URI
@@ -399,7 +408,7 @@ def timegate(req_path, start_response, req_datetime):
     # If the handler returned several Mementos, take the closest
     memento = best(mementos, accept_datetime, RESOURCE_TYPE)
     # Generates the TimeGate response body and Headers
-    return respmemento(memento, uri_r, start_response, hasattr(handler, 'getall'))
+    return memento_response(memento, uri_r, start_response, hasattr(handler, 'getall'))
 
 
 def timemap(req_path, req_mime, start_response):
@@ -430,6 +439,6 @@ def timemap(req_path, req_mime, start_response):
 
     # Generates the TimeMap response body and Headers
     if req_mime.startswith(JSONSTR):
-        return create_tm_json(mementos, uri_r, start_response)
+        return timemap_json_response(mementos, uri_r, start_response)
     else:  # TODO define default (crash / link)
-        return create_tm_link(mementos, uri_r, start_response)
+        return timemap_link_response(mementos, uri_r, start_response)
