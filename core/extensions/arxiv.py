@@ -43,4 +43,3 @@ class ArxivHandler(Handler):
 
         print versions
         return map(mapper, versions)
-

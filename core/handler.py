@@ -81,7 +81,7 @@ def validate_response(handler_response):
 
     # Input check
     if not handler_response:
-        raise HandlerError('Handler response Empty.', 404)
+        raise HandlerError('Not Found / Handler response Empty.', 404)
     elif isinstance(handler_response, tuple):
         handler_response = [handler_response]
     elif not (isinstance(handler_response, list) and

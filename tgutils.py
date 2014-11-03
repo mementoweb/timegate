@@ -112,6 +112,13 @@ def nowstr():
     return date_str(datetime.utcnow()).encode('utf8')
 
 
+def best(timemap, accept_datetime, timemap_type, sorted=True):
+    if timemap_type == 'vcs':
+        return closest_before(timemap, accept_datetime, sorted)
+    else:
+        return closest(timemap, accept_datetime, sorted)
+
+
 def closest(timemap, accept_datetime, sorted=True):
     """
     Finds the chronologically closest memento
@@ -120,6 +127,8 @@ def closest(timemap, accept_datetime, sorted=True):
     :param sorted: boolean to indicate if the list is sorted or not.
     :return:
     """
+
+    # TODO optimize
 
     delta = timedelta.max
     memento = None
@@ -136,11 +145,6 @@ def closest(timemap, accept_datetime, sorted=True):
 
     return memento
 
-def best(timemap, accept_datetime, timemap_type, sorted=True):
-    if timemap_type == 'vcs':
-        return closest_before(timemap, accept_datetime, sorted)
-    else:
-        return closest(timemap, accept_datetime, sorted)
 
 def closest_before(timemap, accept_datetime, sorted=True):
     """
@@ -150,6 +154,8 @@ def closest_before(timemap, accept_datetime, sorted=True):
     :param sorted: boolean to indicate if the list is sorted or not.
     :return: The uri_m string of the closest memento
     """
+
+    # TODO optimize
 
     delta = timedelta.max
     prev = None

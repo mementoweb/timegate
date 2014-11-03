@@ -25,38 +25,6 @@ logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.DEBUG)  # DEBUG
 # logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
 # Builds the mapper from URI regular expression to handler class
-'''
-try:
-    handlers_ct = 0
-    tgate_mapper = []  # TODO merge those
-    tmap_mapper = []
-    # Finds every python files in the extensions folder and imports it
-    files = glob.glob(EXTENSIONS_PATH+"*.py")
-    for fname in files:
-        basename = fname[len(EXTENSIONS_PATH):-3]
-        modpath = EXTENSIONS_PATH.replace('/', '.')+basename
-        module = importlib.import_module(modpath)
-        # Finds all python classnames within the file
-        mod_members = inspect.getmembers(module, inspect.isclass)
-        for (name, path) in mod_members:
-            # If the class was not imported, extract the classname
-            if str(path) == (modpath + '.' + name):
-                classname = name
-                # Get the python class object from the classname and module
-                handler_class = getattr(module, classname)
-                # Extract all URI regular expressions that the handlers manages
-                handler = handler_class()
-                handlers_ct += 1
-                for regex in handler.resources:
-                    # Compiles the regex and maps it to the handler python class
-                    if handler.single_requests:
-                        tgate_mapper.append((re.compile(regex), handler_class))
-                    if handler.batch_requests:
-                        tmap_mapper.append((re.compile(regex), handler_class))
-    logging.info("Loaded %d handlers for %d regular expressions URI." % (
-                 handlers_ct, len(tgate_mapper)))
-     '''
-
 handlers_ct = 0
 api_handler = None
 mapper = []
@@ -206,6 +174,7 @@ def respmemento(uri_m, uri_r, start_response, batch_requests=True):
                          ' type="application/link-format"' % timemap_link
         linkheaderval += ', <%s>; rel="timemap";' \
                          ' type="application/json"' % timemap_json
+        linkheaderval += ', <%s>; rel="memento";' % uri_m
 
     linkheaderval = linkheaderval
 
@@ -416,8 +385,10 @@ def timegate(req_path, start_response, req_datetime):
         mementos = cache.get_until(uri_r, accept_datetime)
         if mementos is None:
             if hasattr(handler, 'getone'):
+                logging.info('Using single-request mode.')
                 (uri, mementos) = validate_response(handler.getone(uri_r, accept_datetime))
             else:
+                logging.info('Using multiple-request mode.')
                 mementos = cache.refresh(uri_r, handler.getall, uri_r)
     elif hasattr(handler, 'getone'):
         (uri, mementos) = validate_response(handler.getone(uri_r, accept_datetime))
