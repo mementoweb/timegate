@@ -1,4 +1,3 @@
-import re
 import logging
 
 __author__ = 'Yorick Chollet'
@@ -10,6 +9,7 @@ from tgutils import date_str
 
 
 class MediaWikiHandler(Handler):
+
 
 
     def __init__(self):
@@ -38,10 +38,12 @@ class MediaWikiHandler(Handler):
         #TODO API response if undefined.
 
     def query(self, uri, req_params):
-        print uri
 
         match = self.rex.match(uri)
-        assert bool(match)
+      #  assert bool(match) not true in single request
+
+        if not match:
+            raise HandlerError('Not Found: Not a valid resource for this handler.', 404)
 
         base = match.groups()[0]
         resource = match.groups()[2]  # Note that anchors can be included

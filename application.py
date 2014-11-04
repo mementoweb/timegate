@@ -157,7 +157,7 @@ def error_response(status, message, start_response, headers):
     return body
 
 
-def memento_response(uri_m, uri_r, start_response, batch_requests=True):
+def memento_response(uri_m, uri_r, resource, start_response, batch_requests=True):
     """
     Returns a 302 redirection to the best Memento
     for a resource and a datetime requested by the user.
@@ -170,8 +170,8 @@ def memento_response(uri_m, uri_r, start_response, batch_requests=True):
 
     linkheaderval = '<%s>; rel="original"' % uri_r
     if batch_requests:
-        timemap_link = '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, uri_r)
-        timemap_json = '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, uri_r)
+        timemap_link = '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, resource)
+        timemap_json = '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, resource)
         linkheaderval += ', <%s>; rel="timemap";' \
                          ' type="application/link-format"' % timemap_link
         linkheaderval += ', <%s>; rel="timemap";' \
@@ -198,7 +198,7 @@ def memento_response(uri_m, uri_r, start_response, batch_requests=True):
     return body
 
 
-def timemap_link_response(mementos, uri_r, start_response):
+def timemap_link_response(mementos, uri_r, resource, start_response):
     """
     Creates and sends a timemap response.
     :param mementos: A sorted list of (uri_str, datetime_obj) tuples representing a timemap
@@ -210,11 +210,11 @@ def timemap_link_response(mementos, uri_r, start_response):
     # Adds Original, TimeGate and TimeMap links
     original_link = '<%s>; rel="original"' % uri_r
     timegate_link = '<%s/%s/%s>; rel="timegate"' % (
-        HOST, TIMEGATESTR, uri_r)
+        HOST, TIMEGATESTR, resource)
     link_self = '<%s/%s/%s/%s>; rel="self"; type="application/link-format"' % (
-        HOST, TIMEMAPSTR, LINKSTR, uri_r)
+        HOST, TIMEMAPSTR, LINKSTR, resource)
     json_self = '<%s/%s/%s/%s>; rel="self"; type="application/json"' % (
-        HOST, TIMEMAPSTR, JSONSTR, uri_r)
+        HOST, TIMEMAPSTR, JSONSTR, resource)
 
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
@@ -275,7 +275,7 @@ def timemap_link_response(mementos, uri_r, start_response):
     return [body]
 
 
-def timemap_json_response(mementos, uri_r, start_response):
+def timemap_json_response(mementos, uri_r, resource, start_response):
     """
     Creates and sends a timemap response.
     :param mementos: A list of (uri_str, datetime_obj) tuples representing a timemap
@@ -287,7 +287,7 @@ def timemap_json_response(mementos, uri_r, start_response):
     ret = {}
 
     ret['original_uri'] = uri_r
-    ret['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATESTR, uri_r)
+    ret['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATESTR, resource)
 
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
@@ -322,8 +322,8 @@ def timemap_json_response(mementos, uri_r, start_response):
                            'all': mementos_links}
 
     ret['timemap_uri'] = {
-        'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, uri_r),
-        'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, uri_r),
+        'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, resource),
+        'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, resource),
         'from': first_datestr,
         'until': last_datestr
     }
@@ -388,19 +388,19 @@ def timegate(req_path, start_response, req_datetime):
     else:
         accept_datetime = validate_req_datetime(req_datetime, STRICT_TIME)
 
-    uri_r = validate_req_uri(req_path)
+    resource = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource
-    (handler, uri_r) = loadhandler(uri_r)
+    (handler, uri_r) = loadhandler(resource)
 
     # Runs the handler's API request for the Memento
     if hasattr(handler, 'getall'):  # TODO put in const
         mementos = cache.get_until(uri_r, accept_datetime)
         if mementos is None:
             if hasattr(handler, 'getone'):
-                logging.info('Using single-request mode.')
+                logging.debug('Using single-request mode.')
                 (uri, mementos) = validate_response(handler.getone(uri_r, accept_datetime))
             else:
-                logging.info('Using multiple-request mode.')
+                logging.debug('Using multiple-request mode.')
                 mementos = cache.refresh(uri_r, handler.getall, uri_r)
     elif hasattr(handler, 'getone'):
         (uri, mementos) = validate_response(handler.getone(uri_r, accept_datetime))
@@ -411,7 +411,9 @@ def timegate(req_path, start_response, req_datetime):
     # If the handler returned several Mementos, take the closest
     memento = best(mementos, accept_datetime, RESOURCE_TYPE)
     # Generates the TimeGate response body and Headers
-    return memento_response(memento, uri_r, start_response, hasattr(handler, 'getall'))
+ #   if SINGLE_HANDLER:  # TODO clean
+ #       uri_r = uri_r.replace(handler.base, '')
+    return memento_response(memento, uri_r, resource, start_response, hasattr(handler, 'getall'))
 
 
 def timemap(req_path, req_mime, start_response):
@@ -428,9 +430,9 @@ def timemap(req_path, req_mime, start_response):
         raise URIRequestError('Mime type (%s) unknown. must be %s or %s'
                               % (req_mime, JSONSTR, LINKSTR), 400)
 
-    uri_r = validate_req_uri(req_path)
+    resource = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource.
-    (handler, uri_r) = loadhandler(uri_r)
+    (handler, uri_r) = loadhandler(resource)
 
     if hasattr(handler, 'getall'):
         mementos = cache.get_all(uri_r)
@@ -440,8 +442,11 @@ def timemap(req_path, req_mime, start_response):
         raise TimegateError("NotImplementedError: Handler has neither getone nor getall function.", 503)  # TODO put in const
     assert mementos
 
+    # if SINGLE_HANDLER:  # TODO clean
+    #     uri_r = uri_r.replace(handler.base, '')
+
     # Generates the TimeMap response body and Headers
     if req_mime.startswith(JSONSTR):
-        return timemap_json_response(mementos, uri_r, start_response)
+        return timemap_json_response(mementos, uri_r, resource, start_response)
     else:  # TODO define default (crash / link)
-        return timemap_link_response(mementos, uri_r, start_response)
+        return timemap_link_response(mementos, uri_r, resource, start_response)

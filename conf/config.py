@@ -1,7 +1,7 @@
 __author__ = 'Yorick Chollet'
 
 # Base URI of the TimeGate program
-HOST = 'http://timegate.mementodepot.org/'
+HOST = 'http://timegate.mementodepot.org'
 
 # When True, the user must follow the exact datetime Format.
 STRICT_TIME = True
@@ -20,4 +20,4 @@ CACHE_FILE = 'core/cache_data'
 CACHE_RWLOCK = 'core/cache_rwlock'
 CACHE_DLOCK = 'core/cache_dogpilelock'
 
-SINGLE_HANDLER = False
+SINGLE_HANDLER = True

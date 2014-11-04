@@ -1,5 +1,4 @@
 import re
-import logging
 
 __author__ = 'Yorick Chollet'
 
@@ -23,7 +22,7 @@ class GitHubHandler(Handler):
         self.resources = ['https://github.com/.+',
                           'https://raw.githubusercontent.com/']
 
-        self.base = ''
+        self.base = 'https://'
 
         # Local fields
         self.api = 'https://api.github.com'
