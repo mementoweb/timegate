@@ -201,7 +201,7 @@ def memento_response(uri_m, uri_r, start_response, batch_requests=True):
 def timemap_link_response(mementos, uri_r, start_response):
     """
     Creates and sends a timemap response.
-    :param mementos: A list of (uri_str, datetime_obj) tuples representing a timemap
+    :param mementos: A sorted list of (uri_str, datetime_obj) tuples representing a timemap
     :param uri_r: The URI-R of the original resource
     :param start_response: WSGI callback function
     :return: The HTTP body as a list of one element
@@ -211,9 +211,9 @@ def timemap_link_response(mementos, uri_r, start_response):
     original_link = '<%s>; rel="original"' % uri_r
     timegate_link = '<%s/%s/%s>; rel="timegate"' % (
         HOST, TIMEGATESTR, uri_r)
-    self_link = '<%s/%s/%s/%s>; rel="self"; type="application/link-format"' % (
+    link_self = '<%s/%s/%s/%s>; rel="self"; type="application/link-format"' % (
         HOST, TIMEMAPSTR, LINKSTR, uri_r)
-    other_link = '<%s/%s/%s/%s>; rel="self"; type="application/json"' % (
+    json_self = '<%s/%s/%s/%s>; rel="self"; type="application/json"' % (
         HOST, TIMEMAPSTR, JSONSTR, uri_r)
 
     # Browse through Mementos to find the first and the last
@@ -252,13 +252,13 @@ def timemap_link_response(mementos, uri_r, start_response):
 
         #mementos_links.insert(0, lastlink)
         #mementos_links.insert(0, firstlink) #TODO remove
-        self_link = '%s; from="%s"; until="%s"' % (
-            self_link, first_datestr, last_datestr)
-        other_link = '%s; from="%s"; until="%s"' % (
-            other_link, first_datestr, last_datestr)
+        link_self = '%s; from="%s"; until="%s"' % (
+            link_self, first_datestr, last_datestr)
+        json_self = '%s; from="%s"; until="%s"' % (
+            json_self, first_datestr, last_datestr)
 
     # Aggregates all link strings and constructs the TimeMap body
-    links = [original_link, timegate_link, self_link, other_link]
+    links = [original_link, timegate_link, link_self, json_self]
     links.extend(mementos_links)  # TODO modularizer ca...
     body = ',\n'.join(links) + '\n'
 
@@ -288,14 +288,12 @@ def timemap_json_response(mementos, uri_r, start_response):
 
     ret['original_uri'] = uri_r
     ret['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATESTR, uri_r)
-    ret['timemap_uri'] = {
-        'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, uri_r),
-        'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, uri_r)
-    }
 
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
     mementos_links = []
+    first_datestr = ''
+    last_datestr = ''
     if mementos:
         first_url = mementos[0][0]
         first_date = mementos[0][1]
@@ -319,11 +317,16 @@ def timemap_json_response(mementos, uri_r, start_response):
                      'datetime': first_datestr}
         lastlink = {'memento': last_url,
                     'datetime': last_datestr}
-        ret['from'] = first_datestr
-        ret['until'] = last_datestr
         ret['mementos'] = {'last': lastlink,
                            'first': firstlink,
                            'all': mementos_links}
+
+    ret['timemap_uri'] = {
+        'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, uri_r),
+        'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, uri_r),
+        'from': first_datestr,
+        'until': last_datestr
+    }
 
     body = json.dumps(ret)
 

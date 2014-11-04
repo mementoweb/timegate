@@ -41,5 +41,4 @@ class ArxivHandler(Handler):
             date = version.find('./{http://arxiv.org/OAI/arXivRaw/}date').text
             return (uri_r + v, date)
 
-        print versions
         return map(mapper, versions)
