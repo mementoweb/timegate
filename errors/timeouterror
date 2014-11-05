@@ -1,9 +1,0 @@
-__author__ = 'Yorick Chollet'
-
-from timegateerror import TimegateError
-
-
-class TimeoutError(TimegateError):
-
-    def __init__(self, msg, status=413):
-        super(TimegateError, self).__init__(msg, status)

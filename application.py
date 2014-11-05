@@ -392,6 +392,8 @@ def timegate(req_path, start_response, req_datetime):
     # Dynamically loads the handler for that resource
     (handler, uri_r) = loadhandler(resource)
 
+    print handler
+
     # Runs the handler's API request for the Memento
     if hasattr(handler, 'getall'):  # TODO put in const
         mementos = cache.get_until(uri_r, accept_datetime)
@@ -439,7 +441,7 @@ def timemap(req_path, req_mime, start_response):
         if mementos is None:
             mementos = cache.refresh(uri_r, handler.getall, uri_r)
     else:
-        raise TimegateError("NotImplementedError: Handler has neither getone nor getall function.", 503)  # TODO put in const
+        raise TimegateError("Handler cannot serve timemaps.", 400)  # TODO put in const
     assert mementos
 
     # if SINGLE_HANDLER:  # TODO clean
