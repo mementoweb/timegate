@@ -1,3 +1,4 @@
+from __future__ import with_statement # Required in 2.5
 __author__ = 'Yorick Chollet'
 
 import logging
@@ -10,6 +11,10 @@ from urlparse import urlparse
 from conf.constants import DATEFMT, HTTPRE
 from errors.urierror import URIRequestError
 from errors.dateerror import DateTimeError
+
+
+import signal
+from contextlib import contextmanager
 
 
 def validate_req_datetime(datestr, strict=True):
@@ -189,3 +194,15 @@ def now():
     :return: a date representation of the current UTC time
     """
     return datetime.utcnow().replace(tzinfo=tzutc())
+
+@contextmanager
+def time_limit(seconds):
+    def signal_handler(signum, frame):
+        raise TimeoutError, "Timed out!"
+    signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+

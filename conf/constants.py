@@ -12,6 +12,7 @@ HTTP_STATUS = {
     404: "404 Not Found",
     302: "302 Found",
     400: "400 Bad Request",
+    413: "Request Entity Too Large",
     500: "Internal Server Error",
     503: "503 Service Unavailable"
 }
@@ -36,6 +37,7 @@ EXTENSIONS_PATH = 'core/extensions/'
 LOG_FMT = '%(asctime)s | %(levelname)s| %(message)s'
 LOG_FILE = 'log.txt'
 
+TIME_OUT = 10  # seconds
 
 
 #TODO add decode('iso-8859-1')

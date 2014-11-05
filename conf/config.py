@@ -1,7 +1,7 @@
 __author__ = 'Yorick Chollet'
 
 # Base URI of the TimeGate program
-HOST = 'http://wikipedia.mementodepot.org'
+HOST = 'http://timegate.mementodepot.org'
 
 # When True, the user must follow the exact datetime Format.
 STRICT_TIME = True

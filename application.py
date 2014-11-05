@@ -21,8 +21,8 @@ from tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_
 # Logger configuration
 # logging.basicConfig(filename=LOG_FILE, filemode='w',
 #                     format=LOG_FMT, level=logging.INFO) # release
-logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.DEBUG)  # DEBUG
-# logging.getLogger('uwsgi').setLevel(logging.WARNING)
+logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.INFO)  # DEBUG
+logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
 # Builds the mapper from URI regular expression to handler class
 handlers_ct = 0
@@ -66,9 +66,9 @@ logging.info("Loaded %d handlers for %d regular expressions URI." % (
 try:
     cache = Cache(enabled=CACHE_USE)
 except Exception as e:
-    logging.debug("Exception during cache loading. Cache deactivated. Check permissions")
+    logging.error("Exception during cache loading. Cache deactivated. Check permissions")
     CACHE_USE = False
-    # raise Exception("Fatal Error loading cache Check permissions: %s" % e.message)
+    raise e
 
 
 logging.info("Application loaded. Host: %s" % HOST)

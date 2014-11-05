@@ -34,6 +34,7 @@ class Cache:
                 'dogpile_lockfile': CACHE_DLOCK
             }
         )
+        self.backend.set('', '')
         logging.info("Cached started: cache file: %s, cache expiration: %d seconds, cache tolerance: %d seconds" % (CACHE_FILE, CACHE_EXP, CACHE_TOLERANCE))
 
     def get_until(self, uri_r, date):

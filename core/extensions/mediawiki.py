@@ -16,13 +16,13 @@ class MediaWikiHandler(Handler):
         Handler.__init__(self)
         self.TIMESTAMPFMT = '%Y%m%d%H%M%S'
 
-    def getall(self, uri):
-        params = {
-            'rvlimit': 500,  # Max allowed
-            'continue': ''  # The initial continue value is empty
-        }
-
-        return self.query(uri, params)
+    # def getall(self, uri):
+    #     params = {
+    #         'rvlimit': 500,  # Max allowed
+    #         'continue': ''  # The initial continue value is empty
+    #     }
+    #
+    #     return self.query(uri, params)
 
     # This example requires the datetime
     def getone(self, uri, accept_datetime):
