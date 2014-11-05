@@ -176,13 +176,13 @@ def memento_response(uri_m, uri_r, resource, start_response, batch_requests=True
                          ' type="application/link-format"' % timemap_link
         linkheaderval += ', <%s>; rel="timemap";' \
                          ' type="application/json"' % timemap_json
-        linkheaderval += ', <%s>; rel="memento";' % uri_m
+    linkheaderval += ', <%s>; rel="memento";' % uri_m
 
     linkheaderval = linkheaderval
 
     status = 302
     headers = [
-        ('Date', nowstr()), # TODO check timezone
+        ('Date', nowstr()),  # TODO check timezone
         ('Vary', 'accept-datetime'),
         ('Content-Length', '0'),
         ('Content-Type', 'text/plain; charset=UTF-8'),

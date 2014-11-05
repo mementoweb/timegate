@@ -16,8 +16,8 @@ CACHE_USE = True
 # Time window in which the cache value is considered young enough to be valid
 CACHE_TOLERANCE = 3600
 # Cache files paths
-CACHE_FILE = 'core/cache_data'
-CACHE_RWLOCK = 'core/cache_rwlock'
-CACHE_DLOCK = 'core/cache_dogpilelock'
+CACHE_FILE = 'core/cache/cache_data'
+CACHE_RWLOCK = 'core/cache/cache_rwlock'
+CACHE_DLOCK = 'core/cache/cache_dogpilelock'
 
 SINGLE_HANDLER = False
