@@ -3,7 +3,7 @@ import re
 __author__ = 'Yorick Chollet'
 
 from core.handler import Handler
-from errors.handlererror import HandlerError
+from errors.timegateerror import HandlerError
 
 ACCEPTABLE_RESOURCE = """
 Acceptable resources URI:

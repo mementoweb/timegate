@@ -9,10 +9,7 @@ from dateutil.tz import tzutc
 from urlparse import urlparse
 
 from conf.constants import DATEFMT, HTTPRE
-from errors.timegateerror import TimeoutError
-from errors.urierror import URIRequestError
-from errors.dateerror import DateTimeError
-
+from errors.timegateerror import TimeoutError, URIRequestError, DateTimeError
 
 import signal
 from contextlib import contextmanager

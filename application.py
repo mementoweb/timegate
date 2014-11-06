@@ -10,8 +10,7 @@ import re
 
 from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON
 from conf.config import CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
-from errors.urierror import URIRequestError
-from errors.timegateerror import TimegateError
+from errors.timegateerror import TimegateError, URIRequestError
 from core.cache import Cache
 from core.handler import validate_response
 from tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now

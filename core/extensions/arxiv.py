@@ -1,7 +1,7 @@
 __author__ = 'Yorick Chollet'
 
 from core.handler import Handler
-from errors.handlererror import HandlerError
+from errors.timegateerror import HandlerError
 from lxml import etree
 from StringIO import StringIO
 import logging

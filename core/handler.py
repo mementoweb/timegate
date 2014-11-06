@@ -5,7 +5,7 @@ import logging
 from operator import itemgetter
 
 import tgutils
-from errors.handlererror import HandlerError
+from errors.timegateerror import HandlerError
 
 
 class Handler:
