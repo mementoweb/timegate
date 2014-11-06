@@ -193,14 +193,15 @@ def now():
     """
     return datetime.utcnow().replace(tzinfo=tzutc())
 
+
 @contextmanager
 def time_limit(seconds):
     def signal_handler(signum, frame):
-        raise TimeoutError, "Timed out!"
+        raise TimeoutError, "Time out: request not serveable."
     signal.signal(signal.SIGALRM, signal_handler)
     signal.alarm(seconds)
     try:
-        yield
+        yield  # the function call
     finally:
         signal.alarm(0)
 

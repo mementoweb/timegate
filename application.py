@@ -8,12 +8,12 @@ import json
 
 import re
 
-from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON
+from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON, TIME_OUT
 from conf.config import CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
 from errors.timegateerror import TimegateError, URIRequestError
 from core.cache import Cache
 from core.handler import validate_response
-from tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now
+from tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now, time_limit
 
 
 # Initialization code
@@ -109,7 +109,8 @@ def application(env, start_response):
             if len(req.split('/', 1)) > 1:
                 #removes leading 'TIMEGATESTR/'
                 req_path = req.split('/', 1)[1]
-                return timegate(req_path, start_response, req_datetime)
+                with time_limit(TIME_OUT):
+                    return timegate(req_path, start_response, req_datetime)
             else:
                 raise TimegateError("Incomplete timegate request. \n"
                                     "    Syntax: GET /timegate/:resource", 400)
@@ -125,7 +126,8 @@ def application(env, start_response):
                 req_mime = req.split('/', 2)[1]
                 #removes leading 'TIMEMAPSTR/MIME_TYPE/'
                 req_path = req.split('/', 2)[2]
-                return timemap(req_path, req_mime, start_response)
+                with time_limit(TIME_OUT):
+                    return timemap(req_path, req_mime, start_response)
             else:
                 raise TimegateError("Incomplete timemap request. \n"
                                     "    Syntax: GET /timemap/:type/:resource", 400)
