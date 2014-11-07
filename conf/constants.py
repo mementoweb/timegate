@@ -1,11 +1,9 @@
 __author__ = 'Yorick Chollet'
 
 import re
+from configparser import ConfigParser
 
-
-#TODO define __all__ for all modules
-
-
+### Code constants
 HTTP_STATUS = {
     200: "200 OK",
     405: "405 Method Not Allowed",
@@ -42,3 +40,33 @@ TIME_OUT = 10  # seconds
 
 #TODO add decode('iso-8859-1')
 #TODO def max timemap size for security
+
+
+### Configuration constants
+
+conf = ConfigParser()
+conf.read('conf/config.cfg')
+
+## Server configuration
+HOST = conf.get('server', 'host')
+STRICT_TIME = conf.getboolean('server', 'strict_datetime')
+
+## Handler(s) configuration
+SINGLE_HANDLER = conf.getboolean('handler', 'single')
+if conf.getboolean('handler', 'is_vcs'):
+    RESOURCE_TYPE = 'vcs'
+else:
+    RESOURCE_TYPE = 'snapshot'
+
+## Cache
+# When False, all cache requests will be cache MISSes
+CACHE_USE = conf.getboolean('cache', 'activated')
+# Cache values expire after one day.
+CACHE_EXP = conf.getint('cache', 'expiration_seconds')
+# Time window in which the cache value is considered young enough to be valid
+CACHE_TOLERANCE = conf.getint('cache', 'tolerance_seconds')
+# Cache files paths
+CACHE_FILE = conf.get('cache', 'fdata')
+CACHE_RWLOCK = conf.get('cache', 'flock')
+CACHE_DLOCK = conf.get('cache', 'fdogpile')
+

@@ -8,8 +8,7 @@ import json
 
 import re
 
-from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON, TIME_OUT
-from conf.config import CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
+from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON, TIME_OUT,  CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
 from errors.timegateerror import TimegateError, URIRequestError
 from core.cache import Cache
 from core.handler import validate_response
@@ -65,7 +64,7 @@ logging.info("Loaded %d handlers for %d regular expressions URI." % (
 try:
     cache = Cache(enabled=CACHE_USE)
 except Exception as e:
-    logging.error("Exception during cache loading. Cache deactivated. Check permissions")
+    logging.error("Exception during cache loading. Check permissions")
     CACHE_USE = False
     raise e
 
