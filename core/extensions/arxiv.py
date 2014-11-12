@@ -16,7 +16,7 @@ class ArxivHandler(Handler):
                           'http://arxiv.org/pdf/']
         self.base = 'http://arxiv.org/'
 
-        self.rex = re.compile('(.+)/((?:pdf)|(?:abs))/(.+)')
+        self.rex = re.compile('(http://arxiv.org)/((?:pdf)|(?:abs))/(.+)')
 
         self.api_base = 'http://export.arxiv.org/oai2'
 
@@ -43,8 +43,9 @@ class ArxivHandler(Handler):
                 v = version.xpath('@*')[0]
                 date = version.find('./{http://arxiv.org/OAI/arXivRaw/}date').text
                 return (uri_r + v, date)
+
+            return map(mapper, versions)
+
         except Exception as e:
             logging.debug('Arxiv handler exception: %s returning 404' % e.message)
             raise HandlerError('Resource Not Found on arXiv server', 404)
-
-        return map(mapper, versions)

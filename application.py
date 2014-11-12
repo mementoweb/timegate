@@ -252,10 +252,10 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
 
         #mementos_links.insert(0, lastlink)
         #mementos_links.insert(0, firstlink) #TODO remove
-        link_self = '%s; from="%s"; until="%s"' % (
-             link_self, first_datestr, last_datestr)
-        json_self = '%s; from="%s"; until="%s"' % (
-             json_self, first_datestr, last_datestr)
+        #link_self = '%s; from="%s"; until="%s"' % (
+        #     link_self, first_datestr, last_datestr)
+        #json_self = '%s; from="%s"; until="%s"' % (
+        #     json_self, first_datestr, last_datestr)
         # link_self = '%s' % (
         #     link_self)
         # json_self = '%s' % (
