@@ -253,9 +253,13 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
         #mementos_links.insert(0, lastlink)
         #mementos_links.insert(0, firstlink) #TODO remove
         link_self = '%s; from="%s"; until="%s"' % (
-            link_self, first_datestr, last_datestr)
+             link_self, first_datestr, last_datestr)
         json_self = '%s; from="%s"; until="%s"' % (
-            json_self, first_datestr, last_datestr)
+             json_self, first_datestr, last_datestr)
+        # link_self = '%s' % (
+        #     link_self)
+        # json_self = '%s' % (
+        #     json_self)
 
     # Aggregates all link strings and constructs the TimeMap body
     links = [original_link, timegate_link, link_self, json_self]
@@ -272,6 +276,7 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
     start_response(HTTP_STATUS[status], headers)
     logging.info("Returning %d, LINK TimeMap of size %d for URI-R=%s" %
                  (status, len(mementos), uri_r))
+
     return [body]
 
 
@@ -323,9 +328,9 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
 
     ret['timemap_uri'] = {
         'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, resource),
-        'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, resource),
-        'from': first_datestr,
-        'until': last_datestr
+        'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, resource)
+        # 'from': first_datestr,
+        # 'until': last_datestr
     }
 
     body = json.dumps(ret)

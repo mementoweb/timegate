@@ -1,6 +1,6 @@
 # Memento TimeGate
 
-The TimeGate server allows simple implementation of [Memento](http://mementoweb.org) TimeGate capabilities for a web resource that already has a version API.
+The TimeGate server allows simple implementation of [Memento](http://mementoweb.org) TimeGate capabilities for a web resource having a version API.
 TimeGate is a generic server that sits between a Memento client and any type of resource version API to enable easy implementation Datetime negotiation for the resources.
 The server manages all the content negotiation logic, from request processing, best memento query and selection to response headers creation.
 
@@ -38,16 +38,17 @@ Handlers examples are provided for several APIs:
 
 ## Running and stopping the server
 To start it, there are two possibilities:
-- either execute `uwsgi --http :PORT --wsgi-file application.py --master [--pidfile /path/to/file.pid]`
-- or edit the uWSGI configuration in conf/timegate.ini and execute `uwsgi conf/timegate.ini`
+- either execute
+`uwsgi --http :PORT --wsgi-file application.py --master [--pidfile /path/to/file.pid]`
+- or edit the uWSGI configuration in conf/timegate.ini and then execute
+`uwsgi conf/timegate.ini`
 
 To stop the server, simply use `CTRL+C` if it is running in foreground.
 To use the server in background, store the pid in a file and stop it using `uwsgi --stop /path/to/file.pid`
 
 ## Configuring the server
-Edit the file `conf/config.cfg`
+Config file: `conf/config.cfg`
 
-Fields explanation:
 - `host` The URI at which the timegate requests arrive
 - `strict_datetime` When True, the server will not try to parse Accept-Datetime header values that do not comply with the RFC
 

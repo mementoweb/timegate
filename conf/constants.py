@@ -48,7 +48,7 @@ conf = ConfigParser()
 conf.read('conf/config.cfg')
 
 ## Server configuration
-HOST = conf.get('server', 'host')
+HOST = unicode.encode(conf.get('server', 'host'), 'utf-8')
 STRICT_TIME = conf.getboolean('server', 'strict_datetime')
 
 ## Handler(s) configuration
