@@ -25,12 +25,12 @@ class MediaWikiHandler(Handler):
     #     return self.query(uri, params)
 
     # This example requires the datetime
-    def getone(self, uri, accept_datetime, dir='older'):
+    def getone(self, uri, accept_datetime):
         timestamp = date_str(accept_datetime, self.TIMESTAMPFMT)
         params = {
             'rvlimit': 1,  # Only need one
             'rvstart': timestamp,  # Start listing from here
-            'rvdir': dir  # List in decreasing order
+            'rvdir': 'older'  # List in decreasing order
         }
 
         return self.query(uri, params)
