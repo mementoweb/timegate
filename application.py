@@ -1,4 +1,6 @@
 __author__ = 'Yorick Chollet'
+import uwsgi
+from uwsgidecorators import harakiri
 
 import importlib
 import inspect
@@ -6,13 +8,15 @@ import glob
 import logging
 import json
 
+
 import re
 
-from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON, TIME_OUT,  CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
-from errors.timegateerror import TimegateError, URIRequestError
+from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON, HARAKIRI,  CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE, API_TIME_OUT
+from errors.timegateerror import TimegateError, URIRequestError, TimeoutError
 from core.cache import Cache
 from core.handler import validate_response
-from tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now, time_limit
+from tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now
+
 
 
 # Initialization code
@@ -27,38 +31,42 @@ handlers_ct = 0
 api_handler = None
 mapper = []
 
-# try:
-# Finds every python files in the extensions folder and imports it
-files = glob.glob(EXTENSIONS_PATH+"*.py")
-for fname in files:
-    basename = fname[len(EXTENSIONS_PATH):-3]
-    modpath = EXTENSIONS_PATH.replace('/', '.')+basename
-    module = importlib.import_module(modpath)
-    # Finds all python classnames within the file
-    mod_members = inspect.getmembers(module, inspect.isclass)
-    for (name, path) in mod_members:
-        # If the class was not imported, extract the classname
-        if str(path) == (modpath + '.' + name):
-            classname = name
-            # Get the python class object from the classname and module
-            handler_class = getattr(module, classname)
-            # Extract all URI regular expressions that the handlers manages
-            api_handler = handler_class()
-            logging.info("Found handler %s" % classname)
-            handlers_ct += 1
-            if SINGLE_HANDLER and handlers_ct > 1:
-                raise Exception("More than one python class file"
-                                " in handler directory found. ")
-            else:
-                for regex in api_handler.resources:
-                    # Compiles the regex and maps it to the handler python class
-                    mapper.append((re.compile(regex), api_handler))
-logging.info("Loaded %d handlers for %d regular expressions URI." % (
-            handlers_ct, len(mapper)))
-#
-# except Exception as e:
-#     logging.debug("Exception during handler loading: %s" % e.message)
-#     raise Exception("Fatal Error loading handlers: %s" % e.message)
+try:
+    # Finds every python files in the extensions folder and imports it
+    files = glob.glob(EXTENSIONS_PATH+"*.py")
+    for fname in files:
+        basename = fname[len(EXTENSIONS_PATH):-3]
+        modpath = EXTENSIONS_PATH.replace('/', '.')+basename
+        module = importlib.import_module(modpath)
+        # Finds all python classnames within the file
+        mod_members = inspect.getmembers(module, inspect.isclass)
+        for (name, path) in mod_members:
+            # If the class was not imported, extract the classname
+            if str(path) == (modpath + '.' + name):
+                classname = name
+                # Get the python class object from the classname and module
+                handler_class = getattr(module, classname)
+                # Extract all URI regular expressions that the handlers manages
+                api_handler = handler_class()
+                logging.info("Found handler %s" % classname)
+                handlers_ct += 1
+                if SINGLE_HANDLER and handlers_ct > 1:
+                    raise Exception("More than one python class file"
+                                    " in handler directory found. ")
+                else:
+                    for regex in api_handler.resources:
+                        # Compiles the regex and maps it to the handler python class
+                        mapper.append((re.compile(regex), api_handler))
+    if handlers_ct > 0:
+        logging.info("Loaded %d handlers for %d regular expressions URI." % (
+                handlers_ct, len(mapper)))
+    else:
+        raise Exception("No header loaded.")
+
+
+except Exception as e:
+    logging.error("Exception during handler loading: %s" % e.message)
+    raise e
 
 # Cache loading
 try:
@@ -67,7 +75,6 @@ except Exception as e:
     logging.error("Exception during cache loading. Check permissions")
     CACHE_USE = False
     raise e
-
 
 logging.info("Application loaded. Host: %s" % HOST)
 
@@ -108,8 +115,7 @@ def application(env, start_response):
             if len(req.split('/', 1)) > 1:
                 #removes leading 'TIMEGATESTR/'
                 req_path = req.split('/', 1)[1]
-                with time_limit(TIME_OUT):
-                    return timegate(req_path, start_response, req_datetime)
+                return timegate(req_path, start_response, req_datetime)
             else:
                 raise TimegateError("Incomplete timegate request. \n"
                                     "    Syntax: GET /timegate/:resource", 400)
@@ -125,8 +131,7 @@ def application(env, start_response):
                 req_mime = req.split('/', 2)[1]
                 #removes leading 'TIMEMAPSTR/MIME_TYPE/'
                 req_path = req.split('/', 2)[2]
-                with time_limit(TIME_OUT):
-                    return timemap(req_path, req_mime, start_response)
+                return timemap(req_path, req_mime, start_response)
             else:
                 raise TimegateError("Incomplete timemap request. \n"
                                     "    Syntax: GET /timemap/:type/:resource", 400)
@@ -375,6 +380,7 @@ def loadhandler(uri):
     raise URIRequestError("Cannot find any handler for '%s'" % uri, 404)
 
 
+@harakiri(HARAKIRI)
 def timegate(req_path, start_response, req_datetime):
     """
     Handles timegate high-level logic. Fetch the Memento for the requested URI
@@ -386,6 +392,7 @@ def timegate(req_path, start_response, req_datetime):
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
+    uwsgi.add_rb_timer(1, API_TIME_OUT, 1)
 
     # Parses the date time and original resoure URI
     if req_datetime is None or req_datetime == '':
@@ -396,9 +403,6 @@ def timegate(req_path, start_response, req_datetime):
     resource = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource
     (handler, uri_r) = loadhandler(resource)
-
-    print handler
-
     # Runs the handler's API request for the Memento
     if hasattr(handler, 'getall'):  # TODO put in const
         mementos = cache.get_until(uri_r, accept_datetime)
@@ -412,7 +416,7 @@ def timegate(req_path, start_response, req_datetime):
     elif hasattr(handler, 'getone'):
         (uri, mementos) = validate_response(handler.getone(uri_r, accept_datetime))
     else:
-        raise TimegateError("NotImplementedError: Handler has neither getone nor getall function.", 503)  # TODO put in const
+        raise TimegateError("NotImplementedError: Handler has neither getone nor getall function.", 502)  # TODO put in const
     assert mementos
 
     # If the handler returned several Mementos, take the closest
@@ -423,6 +427,7 @@ def timegate(req_path, start_response, req_datetime):
     return memento_response(memento, uri_r, resource, start_response, hasattr(handler, 'getall'))
 
 
+@harakiri(HARAKIRI)
 def timemap(req_path, req_mime, start_response):
     """
     Handles TimeMap high-level logic. Fetches all Mementos for an Original

@@ -39,6 +39,7 @@ class GitHubHandler(Handler):
         self.file_rex = re.compile('(/blob)?/master')  # The regex for files
 
     def getall(self, uri):
+        MAX_CONT = 25
 
         # URI deconstruction
         match = self.rex.match(uri)
@@ -108,7 +109,9 @@ class GitHubHandler(Handler):
 
         # Does sequential queries to get all commits of the particular resource
         queries_results = []
-        while cont is not None:
+        i = 0
+        while cont is not None and i < MAX_CONT:
+            i = i + 1
             req = self.request(cont, params=params, auth=auth)
             cont = None
             if not req:

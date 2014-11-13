@@ -10,9 +10,10 @@ HTTP_STATUS = {
     404: "404 Not Found",
     302: "302 Found",
     400: "400 Bad Request",
-    413: "Request Entity Too Large",
     500: "Internal Server Error",
-    503: "503 Service Unavailable"
+    503: "503 Service Unavailable",
+    502: "Bad Gateway",
+    416: 'Requested Range Not Satisfiable'
 }
 
 TIMEMAPSTR = 'timemap'
@@ -35,8 +36,10 @@ EXTENSIONS_PATH = 'core/extensions/'
 LOG_FMT = '%(asctime)s | %(levelname)s| %(message)s'
 LOG_FILE = 'log.txt'
 
-TIME_OUT = 10  # seconds
+HARAKIRI = 27  # seconds
 
+
+MAX_TM_SIZE = 25000
 
 #TODO add decode('iso-8859-1')
 #TODO def max timemap size for security
@@ -50,6 +53,7 @@ conf.read('conf/config.cfg')
 ## Server configuration
 HOST = unicode.encode(conf.get('server', 'host'), 'utf-8')
 STRICT_TIME = conf.getboolean('server', 'strict_datetime')
+API_TIME_OUT = conf.getint('server', 'api_time_out')
 
 ## Handler(s) configuration
 SINGLE_HANDLER = conf.getboolean('handler', 'single')

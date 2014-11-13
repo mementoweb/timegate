@@ -7,6 +7,8 @@ from operator import itemgetter
 import tgutils
 from errors.timegateerror import HandlerError
 
+from conf.constants import MAX_TM_SIZE, API_TIME_OUT
+
 
 class Handler:
 
@@ -41,7 +43,7 @@ class Handler:
     #     raise NotImplementedError
 
 
-    def request(self, resource, **kwargs):
+    def request(self, resource, timeout=API_TIME_OUT, **kwargs):
         """
         Handler helper function. Requests the resource at host.
         :param host: The hostname of the API
@@ -60,7 +62,7 @@ class Handler:
             pass # Key errors on 'params'
 
         try:
-            req = requests.get(uri, **kwargs)
+            req = requests.get(uri, timeout=timeout, **kwargs)
         except Exception as e:
             raise HandlerError("Cannot request version server (%s): %s" % (uri, e.message))
 
@@ -81,12 +83,14 @@ def validate_response(handler_response):
 
     # Input check
     if not handler_response:
-        raise HandlerError('Not Found / Handler response Empty.', 404)
+        raise HandlerError('Not Found: Handler response Empty.', 404)
     elif isinstance(handler_response, tuple):
         handler_response = [handler_response]
     elif not (isinstance(handler_response, list) and
                   isinstance(handler_response[0], tuple)):
-        raise HandlerError('handler_response must be either None, 2-Tuple or 2-Tuple array', 503)
+        raise HandlerError('handler_response must be either None, 2-Tuple or 2-Tuple array', 502)
+    elif len(handler_response) > MAX_TM_SIZE:
+        raise HandlerError('Handler response too big and unprocessable.', 502)
 
     # Output variables
     mementos = []
@@ -106,7 +110,7 @@ def validate_response(handler_response):
                            'response must be either None, (url, date)-Tuple or'
                            ' (url, date)-Tuple array, where '
                            'url, date are with standards formats  %s'
-                           % e.message, 503)
+                           % e.message, 502)
 
     if not mementos:
         raise HandlerError('Handler response does not contain any memento for the requested resource.', 404)

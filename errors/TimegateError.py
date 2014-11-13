@@ -9,7 +9,7 @@ class TimegateError(Exception):
 
 class TimeoutError(TimegateError):
 
-    def __init__(self, msg, status=413):
+    def __init__(self, msg, status=416):
         super(TimegateError, self).__init__(msg, status)
 
 
