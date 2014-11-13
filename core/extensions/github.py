@@ -5,6 +5,8 @@ __author__ = 'Yorick Chollet'
 from core.handler import Handler
 from errors.timegateerror import HandlerError
 
+import time
+
 ACCEPTABLE_RESOURCE = """
 Acceptable resources URI:
 repositories (github.com/:user/:repo/),
@@ -39,7 +41,7 @@ class GitHubHandler(Handler):
         self.file_rex = re.compile('(/blob)?/master')  # The regex for files
 
     def getall(self, uri):
-        MAX_CONT = 20
+        MAX_TIME = 15 #seconds
 
         # URI deconstruction
         match = self.rex.match(uri)
@@ -109,11 +111,10 @@ class GitHubHandler(Handler):
 
         # Does sequential queries to get all commits of the particular resource
         queries_results = []
-        i = 0
+        tmax = int(time.time()) + MAX_TIME
         while cont is not None:
-            i = i + 1
-            if i > MAX_CONT:
-                raise HandlerError("Resource too big to be served", 502)
+            if int(time.time()) > tmax:
+                raise HandlerError("Resource too big to be served. GitHub Handler TimeOut (timeout: %d seconds)" % MAX_TIME, 502)
             req = self.request(cont, params=params, auth=auth)
             cont = None
             if not req:

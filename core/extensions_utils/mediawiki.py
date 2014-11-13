@@ -25,12 +25,12 @@ class MediaWikiHandler(Handler):
     #     return self.query(uri, params)
 
     # This example requires the datetime
-    def getone(self, uri, accept_datetime):
+    def getone(self, uri, accept_datetime, dir='older'):
         timestamp = date_str(accept_datetime, self.TIMESTAMPFMT)
         params = {
             'rvlimit': 1,  # Only need one
             'rvstart': timestamp,  # Start listing from here
-            'rvdir': 'older'  # List in decreasing order
+            'rvdir': dir  # List in decreasing order
         }
 
         return self.query(uri, params)
@@ -82,7 +82,11 @@ class MediaWikiHandler(Handler):
                                 'invalid' in result['query']['pages'][pid]):
                     raise HandlerError("Cannot find resource on version server.", 404)
             except Exception as e:
-                raise HandlerError("Cannot find resource on version server.", 404)
+                if req_params['rvdir'] == 'older':
+                    req_params['rvdir'] = 'newer'
+                    return self.query(uri, req_params)
+                else:
+                    raise HandlerError("No revision returned from API.", 404)
             if 'continue' in result:
                 # The response was truncated, the rest can be obtained using
                 # &rvcontinue=ID

@@ -397,7 +397,6 @@ def timegate(req_path, start_response, req_datetime):
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
-    uwsgi.add_rb_timer(1, API_TIME_OUT, 1)
 
     # Parses the date time and original resoure URI
     if req_datetime is None or req_datetime == '':

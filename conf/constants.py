@@ -11,6 +11,7 @@ HTTP_STATUS = {
     302: "302 Found",
     400: "400 Bad Request",
     500: "Internal Server Error",
+    501: "Not Implemented",
     503: "503 Service Unavailable",
     502: "Bad Gateway",
     416: 'Requested Range Not Satisfiable'
@@ -36,7 +37,7 @@ EXTENSIONS_PATH = 'core/extensions/'
 LOG_FMT = '%(asctime)s | %(levelname)s| %(message)s'
 LOG_FILE = 'log.txt'
 
-HARAKIRI = 27  # seconds
+HARAKIRI = 30  # seconds todo push to config
 
 
 MAX_TM_SIZE = 25000
@@ -53,7 +54,7 @@ conf.read('conf/config.cfg')
 ## Server configuration
 HOST = unicode.encode(conf.get('server', 'host'), 'utf-8')
 STRICT_TIME = conf.getboolean('server', 'strict_datetime')
-API_TIME_OUT = conf.getint('server', 'api_time_out')
+API_TIME_OUT = conf.getfloat('server', 'api_time_out')
 
 ## Handler(s) configuration
 SINGLE_HANDLER = conf.getboolean('handler', 'single')

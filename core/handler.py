@@ -64,7 +64,7 @@ class Handler:
         try:
             req = requests.get(uri, timeout=timeout, **kwargs)
         except Exception as e:
-            raise HandlerError("Cannot request version server (%s): %s" % (uri, e.message))
+            raise HandlerError("Cannot request version server (%s): %s" % (uri, e.message), 502)
 
         if req is None:
             raise HandlerError("Error requesting version server (%s)" % uri)
