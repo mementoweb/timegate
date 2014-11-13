@@ -118,8 +118,7 @@ def application(env, start_response):
                 raise TimegateError("Incomplete timegate request. \n"
                                     "    Syntax: GET /timegate/:resource", 400)
         except TimegateError as e:
-            return error_response(e.status, e.message,
-                             start_response)
+            return error_response(e.status, e.message, start_response)
 
     # Serving TimeMap Request
     elif req_type == TIMEMAPSTR:
@@ -134,8 +133,7 @@ def application(env, start_response):
                 raise TimegateError("Incomplete timemap request. \n"
                                     "    Syntax: GET /timemap/:type/:resource", 400)
         except TimegateError as e:
-            return error_response(e.status, e.message,
-                             start_response)
+            return error_response(e.status, e.message, start_response)
 
     # Unknown Service Request
     else:
@@ -423,6 +421,7 @@ def timegate(req_path, start_response, req_datetime):
     elif hasattr(handler, 'getone'):
         (uri, mementos) = validate_response(handler.getone(uri_r, accept_datetime))
     else:
+        logging.error("NotImplementedError: Handler has neither getone nor getall function.")
         raise TimegateError("NotImplementedError: Handler has neither getone nor getall function.", 502)  # TODO put in const
     assert mementos
 

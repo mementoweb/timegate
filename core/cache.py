@@ -36,7 +36,7 @@ class Cache:
         self.backend.set('', '')
         logging.info("Cached started: cache file: %s, cache expiration: %d seconds, cache tolerance: %d seconds" % (CACHE_FILE, CACHE_EXP, CACHE_TOLERANCE))
 
-    def get_until(self, uri_r, date):
+    def get_until(self, uri_r, date, retry=False):
         """ # TODO recomment
         Returns the timemap (memento,datetime)-list for the requested memento.
         The timemap is garanteed to span at least until the 'date' parameter,
@@ -59,7 +59,8 @@ class Cache:
         try:
             val = self.backend.get(uri_r)
         except Exception as e:
-            raise CacheError("Exception loading cache content: %s" % e.message)
+            logging.error("Exception loading cache content: %s" % e.message)
+            raise CacheError("Exception loading cache content")
 
         if val:
             # There is a value in the cache
@@ -98,7 +99,8 @@ class Cache:
         except HandlerError as he:
             raise he
         except Exception as e:
-            raise HandlerError("Error getting and parsing handler response: %s" % e.message)
+            logging.error("Error getting and parsing handler response: %s" % e.message)
+            raise HandlerError("Error getting and parsing handler response: %s")
         if self.enabled:
             # Creates or refreshes the new timemap for that URI-R
             self.set(uri_r, timemap)
