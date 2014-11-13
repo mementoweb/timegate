@@ -96,14 +96,12 @@ def application(env, start_response):
     logging.info("Incoming request: %s %s, Accept-Datetime: %s, Accept: %s" % (
                  req_met, req, req_datetime, req_mime))
 
-    # Standard response header
-    headers = [('Content-Type', 'text/html')]
 
     # Escaping all other than 'GET' requests:
     if req_met != 'GET' and req_met != 'HEAD':
         status = 405
         message = "Request method '%s' not allowed." % req_met
-        return error_response(status, message, start_response, headers)
+        return error_response(status, message, start_response)
 
     # Processing request service type and path
     req = req.lstrip('/')
@@ -121,7 +119,7 @@ def application(env, start_response):
                                     "    Syntax: GET /timegate/:resource", 400)
         except TimegateError as e:
             return error_response(e.status, e.message,
-                             start_response, headers)
+                             start_response)
 
     # Serving TimeMap Request
     elif req_type == TIMEMAPSTR:
@@ -137,17 +135,17 @@ def application(env, start_response):
                                     "    Syntax: GET /timemap/:type/:resource", 400)
         except TimegateError as e:
             return error_response(e.status, e.message,
-                             start_response, headers)
+                             start_response)
 
     # Unknown Service Request
     else:
         status = 400
         message = "Service request type '%s' does not match '%s' or '%s'" % (
                   req_type, TIMEMAPSTR, TIMEGATESTR)
-        return error_response(status, message, start_response, headers)
+        return error_response(status, message, start_response)
 
 
-def error_response(status, message, start_response, headers):
+def error_response(status, message, start_response):
     """
     Returns an error message to the user
     :param status: HTTP Status of the error
@@ -156,10 +154,19 @@ def error_response(status, message, start_response, headers):
     :param headers: Error HTTP headers
     :return: The HTTP body as a list of one element
     """
-    body = ["%s \n %s \n" % (status, message)]
+    body = "%s \n %s \n" % (status, message)
+
+    # Standard response header
+    headers = [
+        ('Date', nowstr()),  # TODO check timezone
+        ('Vary', 'accept-datetime'),
+        ('Content-Length',  str(len(body))),
+        ('Content-Type', 'text/plain; charset=UTF-8'),
+        ('Connection', 'close')
+    ]
     start_response(HTTP_STATUS[status], headers)
     logging.info("Returning %d Error: %s" % (status, message))
-    return body
+    return [body]
 
 
 def memento_response(uri_m, uri_r, resource, start_response, batch_requests=True):
