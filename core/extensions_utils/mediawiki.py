@@ -69,7 +69,11 @@ class MediaWikiHandler(Handler):
             req = self.request(apibase, params=newparams)
             if req.status_code == 404:
                 raise HandlerError("Cannot find resource on version server.", 404)
-            result = req.json()
+            try:
+                result = req.json()
+            except Exception as e:
+                logging.error("No JSON can be decoded from API %s" % apibase)
+                raise HandlerError("No API answer.", 404)
             if 'error' in result:
                 raise HandlerError(result['error'])
             if 'warnings' in result:

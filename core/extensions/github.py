@@ -119,7 +119,7 @@ class GitHubHandler(Handler):
             cont = None
             if not req:
                 # status code different than 2XX
-                raise HandlerError("Cannot find resource on version server.",
+                raise HandlerError("Cannot find resource on version server. API response %d'd " % req.status_code,
                                    404)
             result = req.json()
             if 'message' in result:

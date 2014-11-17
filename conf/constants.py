@@ -10,11 +10,11 @@ HTTP_STATUS = {
     404: "404 Not Found",
     302: "302 Found",
     400: "400 Bad Request",
-    500: "Internal Server Error",
-    501: "Not Implemented",
+    500: "500 Internal Server Error",
+    501: "501 xNot Implemented",
     503: "503 Service Unavailable",
-    502: "Bad Gateway",
-    416: 'Requested Range Not Satisfiable'
+    502: "502 Bad Gateway",
+    416: '416 Requested Range Not Satisfiable'
 }
 
 TIMEMAPSTR = 'timemap'
