@@ -11,7 +11,7 @@ import json
 
 import re
 
-from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, MIME_JSON, HARAKIRI,  CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE, API_TIME_OUT
+from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, HARAKIRI,  CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
 from errors.timegateerror import TimegateError, URIRequestError, TimeoutError
 from core.cache import Cache
 from core.handler import validate_response
@@ -322,19 +322,19 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
             elif date > last_date:
                 last_date = date
                 last_url = urlstr
-            linkstr = {'memento': urlstr,
+            linkstr = {'uri': urlstr,
                        'datetime': date_str(date)}
             mementos_links.append(linkstr)
 
         first_datestr = first_date.strftime(DATEFMT)
         last_datestr = last_date.strftime(DATEFMT)
-        firstlink = {'memento': first_url,
+        firstlink = {'uri': first_url,
                      'datetime': first_datestr}
-        lastlink = {'memento': last_url,
+        lastlink = {'uri': last_url,
                     'datetime': last_datestr}
         ret['mementos'] = {'last': lastlink,
                            'first': firstlink,
-                           'all': mementos_links}
+                           'list': mementos_links}
 
     ret['timemap_uri'] = {
         'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, resource),

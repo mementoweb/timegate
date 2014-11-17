@@ -7,13 +7,11 @@ from errors.timegateerror import HandlerError
 
 import time
 
-ACCEPTABLE_RESOURCE = """
-Acceptable resources URI:
+ACCEPTABLE_RESOURCE = """Acceptable resources URI:
 repositories (github.com/:user/:repo/),
 folders (github.com/:user/:repo/trees/:path),
 files (github.com/:user/:repo/blob/:path)
-and raw files (raw.githubusercontent.com/:user/:repo/master/:path)
-"""
+and raw files (raw.githubusercontent.com/:user/:repo/master/:path)"""
 
 
 class GitHubHandler(Handler):
@@ -30,18 +28,18 @@ class GitHubHandler(Handler):
         self.api = 'https://api.github.com'
 
         # Precompiles regular expressions
-        self.rex = re.compile("""
+        self.rex = re.compile("""  # The format of URI-Rs
                               (https://)  # protocol
                               ((?:raw.githubusercontent|github).com/)  # base
                               ([^/]+)/  # user
                               ([^/]+)  # repo
                               (/.+)?  # optional path
-                              """, re.X)  # The format of URI-Rs
+                              """, re.X)  # verbosed: ignore whitespaces and \n
         self.header_rex = re.compile('<(.+?)>; rel="next"')  # The regex for the query continuation header
         self.file_rex = re.compile('(/blob)?/master')  # The regex for files
 
     def getall(self, uri):
-        MAX_TIME = 15 #seconds
+        MAX_TIME = 20 #seconds
 
         # URI deconstruction
         match = self.rex.match(uri)
