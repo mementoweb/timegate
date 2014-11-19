@@ -7,7 +7,8 @@ The server manages all the content negotiation logic, from request processing, b
 
 ## Architecture
 
-!https://raw.githubusercontent.com/mementoweb/timegate/master/architecture.png!
+![architecture]
+(https://raw.githubusercontent.com/mementoweb/timegate/master/architecture.png)
 
 The system can be seen as three components.
 
