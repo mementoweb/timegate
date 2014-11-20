@@ -7,8 +7,8 @@ from dateutil.parser import parse as parse_datestr
 from dateutil.tz import tzutc
 from urlparse import urlparse
 
-from conf.constants import DATEFMT, HTTPRE
-from errors.timegateerror import TimeoutError, URIRequestError, DateTimeError
+from conf.constants import DATE_FORMAT
+from errors.timegateerrors import URIRequestError, DateTimeError
 
 
 
@@ -23,7 +23,7 @@ def validate_req_datetime(datestr, strict=True):
 
     try:
         if strict:
-            date = datetime.strptime(datestr, DATEFMT)
+            date = datetime.strptime(datestr, DATE_FORMAT)
         else:
             date = parse_datestr(datestr, fuzzy=True)
         logging.debug("Accept datetime parsed to: "+date_str(date))
@@ -75,7 +75,7 @@ def validate_date(datestr, strict=False):
     """
     try:
         if strict:
-            date = datetime.strptime(datestr, DATEFMT)
+            date = datetime.strptime(datestr, DATE_FORMAT)
         else:
             date = parse_datestr(datestr, fuzzy=True).replace(tzinfo=tzutc())
         return date
@@ -83,7 +83,7 @@ def validate_date(datestr, strict=False):
         raise Exception("Error: cannot parse date string %s" % datestr)
 
 
-def date_str(date, format=DATEFMT):
+def date_str(date, format=DATE_FORMAT):
     """
     Returns a string representation of the date object.
     :param date: the date object which needs to be printed

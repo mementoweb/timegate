@@ -1,6 +1,4 @@
 __author__ = 'Yorick Chollet'
-import uwsgi
-from uwsgidecorators import harakiri
 
 import importlib
 import inspect
@@ -11,59 +9,50 @@ import json
 
 import re
 
-from conf.constants import DATEFMT, JSONSTR, LINKSTR,  TIMEGATESTR, TIMEMAPSTR, HTTP_STATUS, EXTENSIONS_PATH, LOG_FMT, HARAKIRI,  CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
-from errors.timegateerror import TimegateError, URIRequestError, TimeoutError
+from conf.constants import DATE_FORMAT, JSON_URI_PART, LINK_URI_PART,  TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
+from errors.timegateerrors import TimegateError, URIRequestError
 from core.cache import Cache
-from core.handler import validate_response
+from core.handler import validate_response, Handler
 from tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now
-
-
 
 # Initialization code
 # Logger configuration
 # logging.basicConfig(filename=LOG_FILE, filemode='w',
 #                     format=LOG_FMT, level=logging.INFO) # release
-logging.basicConfig(filemode='w', format=LOG_FMT, level=logging.INFO)  # DEBUG
+logging.basicConfig(filemode='w', format=LOG_FORMAT, level=logging.INFO)
 logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
-# Builds the mapper from URI regular expression to handler class
+# Handler(s) Loading
 handlers_ct = 0
-api_handler = None
-mapper = []
-
+if SINGLE_HANDLER:
+    api_handler = None
+else:
+    mapper = []
 try:
-    # Finds every python files in the extensions folder and imports it
-    files = glob.glob(EXTENSIONS_PATH+"*.py")
-    for fname in files:
-        basename = fname[len(EXTENSIONS_PATH):-3]
-        modpath = EXTENSIONS_PATH.replace('/', '.')+basename
-        module = importlib.import_module(modpath)
-        # Finds all python classnames within the file
+    # Finds the paths of every python modules in the extensions folder
+    files = [filename[:-3] for filename in glob.glob(EXTENSIONS_PATH+"*.py")]
+    for module_path in files:
+        # Imports the python module
+        module_identifier = module_path.replace('/', '.')
+        module = importlib.import_module(module_identifier)
+        # Finds all python classes within the module
         mod_members = inspect.getmembers(module, inspect.isclass)
-        for (name, path) in mod_members:
-            # If the class was not imported, extract the classname
-            if str(path) == (modpath + '.' + name):
-                classname = name
-                # Get the python class object from the classname and module
-                handler_class = getattr(module, classname)
-                # Extract all URI regular expressions that the handlers manages
+        for (name, handler_class) in mod_members:
+            # If the class found is not imported from another path, and is a Handler
+            if (str(handler_class) == (module_identifier + '.' + name)
+                    and issubclass(handler_class, Handler)):
                 api_handler = handler_class()
-                logging.info("Found handler %s" % classname)
                 handlers_ct += 1
+                logging.info("Found handler %s" % handler_class)
                 if SINGLE_HANDLER and handlers_ct > 1:
-                    raise Exception("More than one python class file"
-                                    " in handler directory found. ")
+                    raise Exception("More than one python class file in %s.\n    If you intend to use several handlers, modify the configuration in conf/config.cfg" % EXTENSIONS_PATH)
                 else:
+                # Maps all URI regular expressions that the handlers manages to it
                     for regex in api_handler.resources:
-                        # Compiles the regex and maps it to the handler python class
                         mapper.append((re.compile(regex), api_handler))
-    if handlers_ct > 0:
-        logging.info("Loaded %d handlers for %d regular expressions URI." % (
-                handlers_ct, len(mapper)))
-    else:
-        raise Exception("No header loaded.")
-
-
+    logging.info("Loaded %d handler(s)" % handlers_ct)
+    if handlers_ct == 0:
+        raise Exception("No handler found in %s . \n    Ensure that the handler are subclasses of `Handler`." % EXTENSIONS_PATH)
 except Exception as e:
     logging.error("Exception during handler loading: %s" % e.message)
     raise e
@@ -108,7 +97,7 @@ def application(env, start_response):
     req_type = req.split('/', 1)[0]
 
     # Serving TimeGate Request
-    if req_type == TIMEGATESTR:
+    if req_type == TIMEGATE_URI_PART:
         try:
             if len(req.split('/', 1)) > 1:
                 #removes leading 'TIMEGATESTR/'
@@ -121,7 +110,7 @@ def application(env, start_response):
             return error_response(e.status, e.message, start_response)
 
     # Serving TimeMap Request
-    elif req_type == TIMEMAPSTR:
+    elif req_type == TIMEMAP_URI_PART:
         try:
             if len(req.split(('/'), 2)) > 2:
                 # gets the method (JSON or LINK)
@@ -139,7 +128,7 @@ def application(env, start_response):
     else:
         status = 400
         message = "Service request type '%s' does not match '%s' or '%s'" % (
-                  req_type, TIMEMAPSTR, TIMEGATESTR)
+                  req_type, TIMEMAP_URI_PART, TIMEGATE_URI_PART)
         return error_response(status, message, start_response)
 
 
@@ -180,8 +169,8 @@ def memento_response(uri_m, uri_r, resource, start_response, batch_requests=True
 
     linkheaderval = '<%s>; rel="original"' % uri_r
     if batch_requests:
-        timemap_link = '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, resource)
-        timemap_json = '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, resource)
+        timemap_link = '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
+        timemap_json = '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
         linkheaderval += ', <%s>; rel="timemap";' \
                          ' type="application/link-format"' % timemap_link
         linkheaderval += ', <%s>; rel="timemap";' \
@@ -220,11 +209,11 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
     # Adds Original, TimeGate and TimeMap links
     original_link = '<%s>; rel="original"' % uri_r
     timegate_link = '<%s/%s/%s>; rel="timegate"' % (
-        HOST, TIMEGATESTR, resource)
+        HOST, TIMEGATE_URI_PART, resource)
     link_self = '<%s/%s/%s/%s>; rel="self"; type="application/link-format"' % (
-        HOST, TIMEMAPSTR, LINKSTR, resource)
+        HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
     json_self = '<%s/%s/%s/%s>; rel="self"; type="application/json"' % (
-        HOST, TIMEMAPSTR, JSONSTR, resource)
+        HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
 
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
@@ -246,8 +235,8 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
                 urlstr, date_str(date))
             mementos_links.append(linkstr)
 
-        first_datestr = first_date.strftime(DATEFMT)
-        last_datestr = last_date.strftime(DATEFMT)
+        first_datestr = first_date.strftime(DATE_FORMAT)
+        last_datestr = last_date.strftime(DATE_FORMAT)
 
         firstlink = '<%s>; rel="first memento"; datetime="%s"' % (
             first_url, first_datestr)
@@ -302,13 +291,13 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
     ret = {}
 
     ret['original_uri'] = uri_r
-    ret['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATESTR, resource)
+    ret['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATE_URI_PART, resource)
 
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
     mementos_links = []
-    first_datestr = ''
-    last_datestr = ''
+    # first_datestr = ''
+    # last_datestr = ''
     if mementos:
         first_url = mementos[0][0]
         first_date = mementos[0][1]
@@ -326,8 +315,8 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
                        'datetime': date_str(date)}
             mementos_links.append(linkstr)
 
-        first_datestr = first_date.strftime(DATEFMT)
-        last_datestr = last_date.strftime(DATEFMT)
+        first_datestr = first_date.strftime(DATE_FORMAT)
+        last_datestr = last_date.strftime(DATE_FORMAT)
         firstlink = {'uri': first_url,
                      'datetime': first_datestr}
         lastlink = {'uri': last_url,
@@ -337,8 +326,8 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
                            'list': mementos_links}
 
     ret['timemap_uri'] = {
-        'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, JSONSTR, resource),
-        'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAPSTR, LINKSTR, resource)
+        'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource),
+        'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
         # 'from': first_datestr,
         # 'until': last_datestr
     }
@@ -385,7 +374,6 @@ def loadhandler(uri):
     raise URIRequestError("Cannot find any handler for '%s'" % uri, 404)
 
 
-@harakiri(HARAKIRI)
 def timegate(req_path, start_response, req_datetime):
     """
     Handles timegate high-level logic. Fetch the Memento for the requested URI
@@ -432,7 +420,6 @@ def timegate(req_path, start_response, req_datetime):
     return memento_response(memento, uri_r, resource, start_response, hasattr(handler, 'getall'))
 
 
-@harakiri(HARAKIRI)
 def timemap(req_path, req_mime, start_response):
     """
     Handles TimeMap high-level logic. Fetches all Mementos for an Original
@@ -443,9 +430,9 @@ def timemap(req_path, req_mime, start_response):
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
-    if not (req_mime == JSONSTR or req_mime == LINKSTR):
+    if not (req_mime == JSON_URI_PART or req_mime == LINK_URI_PART):
         raise URIRequestError('Mime type (%s) unknown. must be %s or %s'
-                              % (req_mime, JSONSTR, LINKSTR), 400)
+                              % (req_mime, JSON_URI_PART, LINK_URI_PART), 400)
 
     resource = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource.
@@ -463,7 +450,7 @@ def timemap(req_path, req_mime, start_response):
     #     uri_r = uri_r.replace(handler.base, '')
 
     # Generates the TimeMap response body and Headers
-    if req_mime.startswith(JSONSTR):
+    if req_mime.startswith(JSON_URI_PART):
         return timemap_json_response(mementos, uri_r, resource, start_response)
     else:  # TODO define default (crash / link)
         return timemap_link_response(mementos, uri_r, resource, start_response)

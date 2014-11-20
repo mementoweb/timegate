@@ -3,7 +3,7 @@ import re
 __author__ = 'Yorick Chollet'
 
 from core.handler import Handler
-from errors.timegateerror import HandlerError
+from errors.timegateerrors import HandlerError
 
 import time
 

@@ -6,8 +6,8 @@ import unittest  # Python unit test structure
 from webtest import TestApp  # WSGI application tester
 
 import application
-from conf.constants import TIMEMAPSTR, TIMEGATESTR
-from conf.constants import DATEFMT
+from conf.constants import TIMEMAP_URI_PART, TIMEGATE_URI_PART
+from conf.constants import DATE_FORMAT
 
 from test.apistub import application as apistub
 
@@ -24,44 +24,44 @@ class TestServerSequence(unittest.TestCase):
         assert len(response.normal_body) > 1
 
     def test_server_tgroot_status(self):
-        response = server.get('/%s/' % TIMEGATESTR, status=400)
+        response = server.get('/%s/' % TIMEGATE_URI_PART, status=400)
 
     def test_server_tmroot_status(self):
-        response = server.get('/%s/' % TIMEMAPSTR, status=400)
+        response = server.get('/%s/' % TIMEMAP_URI_PART, status=400)
 
     def test_dateOK(self):
-        timestr = time.strftime(DATEFMT, time.gmtime())
+        timestr = time.strftime(DATE_FORMAT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/uri' % TIMEGATESTR, headers=ad, status=200)
+        response = server.get('/%s/uri' % TIMEGATE_URI_PART, headers=ad, status=200)
 
     def test_dateWRONG(self):
         timestr = time.strftime("å/ンページ/ %s /הצלת", time.gmtime())
         ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/uri' % TIMEGATESTR, headers=ad, status=400)
+        response = server.get('/%s/uri' % TIMEGATE_URI_PART, headers=ad, status=400)
 
     def test_urlOK(self):
-        timestr = time.strftime(DATEFMT, time.gmtime())
+        timestr = time.strftime(DATE_FORMAT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/http://www.example.com/resource/' % TIMEGATESTR, headers=ad, status=200)
+        response = server.get('/%s/http://www.example.com/resource/' % TIMEGATE_URI_PART, headers=ad, status=200)
 
     def test_urlTRUNKATED(self):
-        timestr = time.strftime(DATEFMT, time.gmtime())
+        timestr = time.strftime(DATE_FORMAT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/example.com/resource' % TIMEGATESTR, headers=ad, status=200)
+        response = server.get('/%s/example.com/resource' % TIMEGATE_URI_PART, headers=ad, status=200)
 
     def test_urlINEXISTANT(self):
-        timestr = time.strftime(DATEFMT, time.gmtime())
+        timestr = time.strftime(DATE_FORMAT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/http://www.wrong.url/' % TIMEGATESTR, headers=ad, status=200)
+        response = server.get('/%s/http://www.wrong.url/' % TIMEGATE_URI_PART, headers=ad, status=200)
 
     def test_urlUNSAFE(self):
-        timestr = time.strftime(DATEFMT, time.gmtime())
+        timestr = time.strftime(DATE_FORMAT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
         url = """/timegate/http://www.wrong.url/å/ンページ/  /הצלת/é/"""
         response = server.get(url, headers=ad, status=200)
 
     def test_urlNOSLASHR(self):
-        timestr = time.strftime(DATEFMT, time.gmtime())
+        timestr = time.strftime(DATE_FORMAT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
         url = """/timegatewww.wrong.url"""
         response = server.get(url, headers=ad, status=404)
@@ -74,7 +74,7 @@ class TestServerHandlerSeq(unittest.TestCase):
 
     def test_flow(self):
         api = TestApp(apistub)
-        timestr = time.strftime(DATEFMT, time.gmtime())
+        timestr = time.strftime(DATE_FORMAT, time.gmtime())
         ad = {'Accept-Datetime': timestr}
         response = server.get('/timegate/example.com/', headers=ad, status=200)
 
@@ -82,43 +82,43 @@ class TestServerRealSeq(unittest.TestCase):
 
     def test_TG_github_all_resources(self):
         ad = {'Accept-Datetime': DATEHEADER}
-        response = server.get('/%s/https://github.com/mementoweb/timegate' % TIMEGATESTR, headers=ad, status=302)
-        response = server.get('/%s/https://github.com/mementoweb/timegate/tree/master/core' % TIMEGATESTR, headers=ad, status=302)
-        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/timegate/master/core/extensions/example3.py' % TIMEGATESTR, headers=ad, status=302)
-        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/example3.py' % TIMEGATESTR, headers=ad, status=302)
+        response = server.get('/%s/https://github.com/mementoweb/timegate' % TIMEGATE_URI_PART, headers=ad, status=302)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/tree/master/core' % TIMEGATE_URI_PART, headers=ad, status=302)
+        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/timegate/master/core/extensions/example3.py' % TIMEGATE_URI_PART, headers=ad, status=302)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/example3.py' % TIMEGATE_URI_PART, headers=ad, status=302)
 
     def test_TM_github_all_resources(self):
         ad = {'Accept-Datetime': 'none'}
-        response = server.get('/%s/https://github.com/mementoweb/timegate' % TIMEMAPSTR, headers=ad, status=200)
-        response = server.get('/%s/https://github.com/mementoweb/timegate/tree/master/core' % TIMEMAPSTR, headers=ad, status=200)
-        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/timegate/master/core/extensions/example3.py' % TIMEMAPSTR, headers=ad, status=200)
-        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/example3.py' % TIMEMAPSTR, headers=ad, status=200)
+        response = server.get('/%s/https://github.com/mementoweb/timegate' % TIMEMAP_URI_PART, headers=ad, status=200)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/tree/master/core' % TIMEMAP_URI_PART, headers=ad, status=200)
+        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/timegate/master/core/extensions/example3.py' % TIMEMAP_URI_PART, headers=ad, status=200)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/example3.py' % TIMEMAP_URI_PART, headers=ad, status=200)
 
     def test_github_404s(self):
         ad = {'Accept-Datetime': DATEHEADER}
-        response = server.get('/%s/https://github.com/memento2web/timegate' % TIMEMAPSTR, headers=ad, status=404)
-        response = server.get('/%s/https://github.com/meme/2/ntoweb/timegate/tree/master/core' % TIMEMAPSTR, headers=ad, status=404)
-        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/tim/egate/master/core/extensions/example3.py' % TIMEMAPSTR, headers=ad, status=404)
-        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/exajmple3.py' % TIMEMAPSTR, headers=ad, status=404)
+        response = server.get('/%s/https://github.com/memento2web/timegate' % TIMEMAP_URI_PART, headers=ad, status=404)
+        response = server.get('/%s/https://github.com/meme/2/ntoweb/timegate/tree/master/core' % TIMEMAP_URI_PART, headers=ad, status=404)
+        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/tim/egate/master/core/extensions/example3.py' % TIMEMAP_URI_PART, headers=ad, status=404)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/exajmple3.py' % TIMEMAP_URI_PART, headers=ad, status=404)
 
 
     def test_github_bad_req(self):
         ad = {'Accept-Datetime': 'Today'}
-        response = server.get('/%s/https://github.com/memento2web/timegate' % TIMEGATESTR, headers=ad, status=400)
+        response = server.get('/%s/https://github.com/memento2web/timegate' % TIMEGATE_URI_PART, headers=ad, status=400)
         ad = {'Accept-Datetime': DATEHEADER}
         response = server.get('/%s/https://github.com/meme/2/ntoweb/timegate/tree/master/core' % 'test', headers=ad, status=400)
 
     def test_wiki_ok(self):
         ad = {'Accept-Datetime': DATEHEADER}
-        response = server.get('/%s/en.wikipedia.org/wiki/Palézieux' % TIMEGATESTR, headers=ad, status=302)
-        response = server.get('/%s/en.wikipedia.org/wiki/Palézieux' % TIMEMAPSTR, status=200)
+        response = server.get('/%s/en.wikipedia.org/wiki/Palézieux' % TIMEGATE_URI_PART, headers=ad, status=302)
+        response = server.get('/%s/en.wikipedia.org/wiki/Palézieux' % TIMEMAP_URI_PART, status=200)
 
 
     def test_wiki_404(self):
         ad = {'Accept-Datetime': DATEHEADER}
-        response = server.get('/%s/eeen.wikipedia.org/wiki/Albert_Einstein' % TIMEGATESTR, headers=ad, status=404)
-        response = server.get('/%s/en.wikipedia.org/wiki/Eiiiiinstein' % TIMEMAPSTR, status=404)
-        response = server.get('/%s/en.wikipedia.org/kiwi/Albert_Einstein' % TIMEMAPSTR, status=404)
+        response = server.get('/%s/eeen.wikipedia.org/wiki/Albert_Einstein' % TIMEGATE_URI_PART, headers=ad, status=404)
+        response = server.get('/%s/en.wikipedia.org/wiki/Eiiiiinstein' % TIMEMAP_URI_PART, status=404)
+        response = server.get('/%s/en.wikipedia.org/kiwi/Albert_Einstein' % TIMEMAP_URI_PART, status=404)
 
         # TODO add test all kinds of BS responses from handlers
 

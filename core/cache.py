@@ -5,7 +5,7 @@ import logging
 from dogpile.cache import make_region
 
 from conf.constants import CACHE_EXP, CACHE_FILE, CACHE_RWLOCK, CACHE_DLOCK, CACHE_TOLERANCE
-from errors.timegateerror import HandlerError, CacheError
+from errors.timegateerrors import HandlerError, CacheError
 from handler import validate_response
 import tgutils
 
@@ -22,8 +22,10 @@ class Cache:
         every get will be a CACHE MISS.
         :return:
         """
-        self.tolerance = relativedelta(seconds=tolerance)
         self.enabled = enabled
+        if not enabled:
+            return # do not create the files
+        self.tolerance = relativedelta(seconds=tolerance)
         self.backend = make_region().configure(
             'dogpile.cache.dbm',
             expiration_time=expiration,

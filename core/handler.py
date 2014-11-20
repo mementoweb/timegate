@@ -5,9 +5,9 @@ import logging
 from operator import itemgetter
 
 import tgutils
-from errors.timegateerror import HandlerError
+from errors.timegateerrors import HandlerError
 
-from conf.constants import MAX_TM_SIZE, API_TIME_OUT
+from conf.constants import TM_MAX_SIZE, API_TIME_OUT
 
 
 class Handler:
@@ -19,7 +19,7 @@ class Handler:
     def __init__(self):
         # List of regex strings for the original resources that the handler manages
         self.resources = []
-        self.base = None
+        self.base = ''
 
     # def getone(self, uri_r, datetime):
     #     """
@@ -88,8 +88,12 @@ def validate_response(handler_response):
         handler_response = [handler_response]
     elif not (isinstance(handler_response, list) and
                   isinstance(handler_response[0], tuple)):
+        logging.error('Bad response from Handler:'
+                        'Not a tuple nor tuple array')
         raise HandlerError('handler_response must be either None, 2-Tuple or 2-Tuple array', 502)
-    elif len(handler_response) > MAX_TM_SIZE:
+    elif len(handler_response) > TM_MAX_SIZE:
+        logging.warning('Bad response from Handler:'
+                        'TimeMap too big')
         raise HandlerError('Handler response too big and unprocessable.', 502)
 
     # Output variables
@@ -106,9 +110,13 @@ def validate_response(handler_response):
                 #(url, None) represents the original resource
                 url_r = valid_urlstr
     except Exception as e:
+        logging.error('Bad response from Handler:'
+                        'response must be either None, tuple(url, date) or'
+                        ' [tuple(url, date)]. Where '
+                        'url, date are with standards formats  %s')
         raise HandlerError('Bad response from Handler:'
-                           'response must be either None, (url, date)-Tuple or'
-                           ' (url, date)-Tuple array, where '
+                           'response must be either None, tuple(url, date) or'
+                           ' [tuple(url, date)]. Where '
                            'url, date are with standards formats  %s'
                            % e.message, 502)
 
