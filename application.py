@@ -222,8 +222,8 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
         HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
 
     # Browse through Mementos to generate the TimeMap links list
-    mementos_links = ['<%s>; rel="memento"; datetime="%s"'
-                      % (uri, date_str(date)) for (uri, date) in mementos]
+    mementos_links = ['<%s>; rel="memento"; datetime="%s"' % (uri, date_str(date))
+                      for (uri, date) in mementos]
 
     # Sets up first and last relations
     if len(mementos_links) == 1:
@@ -254,44 +254,31 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
 def timemap_json_response(mementos, uri_r, resource, start_response):
     """
     Creates and sends a timemap response.
-    :param mementos: A list of (uri_str, datetime_obj) tuples representing a timemap
+    :param mementos: A sorted list of (uri_str, datetime_obj) tuples representing a timemap
     :param uri_r: The URI-R of the original resource
     :param start_response: WSGI callback function
     :return: The HTTP body as a list of one element
     """
     assert len(mementos) >= 1
 
-    # TODO clean and docstring
+    # JSON response
     ret = {}
 
     ret['original_uri'] = uri_r
     ret['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATE_URI_PART, resource)
 
-    # Browse through Mementos to find the first and the last
-    # Generates TimeMap links list in the process
-    mementos_links = []
-    first_url = mementos[0][0]
-    first_date = mementos[0][1]
-    last_url = mementos[0][0]
-    last_date = mementos[0][1]
+    # Browse through Mementos to generate TimeMap links JSON objects
+    mementos_links = [{'uri': urlstr, 'datetime': date_str(date)}
+                      for (urlstr, date) in mementos]
 
-    for (urlstr, date) in mementos:
-        if date < first_date:
-            first_date = date
-            first_url = urlstr
-        elif date > last_date:
-            last_date = date
-            last_url = urlstr
-        linkstr = {'uri': urlstr,
-                   'datetime': date_str(date)}
-        mementos_links.append(linkstr)
-
-    first_datestr = first_date.strftime(DATE_FORMAT)
-    last_datestr = last_date.strftime(DATE_FORMAT)
-    firstlink = {'uri': first_url,
+    # Sets up first and last
+    first_datestr = mementos[0][1].strftime(DATE_FORMAT)
+    firstlink = {'uri': mementos[0][0],
                  'datetime': first_datestr}
-    lastlink = {'uri': last_url,
+    last_datestr = mementos[-1][1].strftime(DATE_FORMAT)
+    lastlink = {'uri': mementos[-1][0],
                 'datetime': last_datestr}
+
     ret['mementos'] = {'last': lastlink,
                        'first': firstlink,
                        'list': mementos_links}
