@@ -73,11 +73,11 @@ class Handler:
 
 def validate_response(handler_response):
     """
-    Controls and parses the response from the Handler. Also extracts URI-R if provided
+    Controls and parses the response from the Handler.
     as a tuple with the form (URI, None) in the list.
     :param handler_response: Either None, a tuple (URI, date) or a list of (URI, date)
     where one tuple can have 'None' date to indicate that this URI is the original resource's.
-    :return: A tuple (URI-R, Mementos) where Mementos is a sorted (URI_str, date_obj)-list of
+    :return: A sorted (URI_str, date_obj)-list of
     all Mementos. In the response, and all URIs/dates are valid.
     """
 
@@ -98,17 +98,12 @@ def validate_response(handler_response):
 
     # Output variables
     mementos = []
-    url_r = None
 
     try:
         for (url, date) in handler_response:
             valid_urlstr = tgutils.validate_uristr(url)
-            if date:
-                valid_date = tgutils.validate_date(date, strict=False)
-                mementos.append((valid_urlstr, valid_date))
-            else:
-                #(url, None) represents the original resource
-                url_r = valid_urlstr
+            valid_date = tgutils.validate_date(date, strict=False)
+            mementos.append((valid_urlstr, valid_date))
     except Exception as e:
         logging.error('Bad response from Handler:'
                         'response must be either None, tuple(url, date) or'
@@ -127,4 +122,4 @@ def validate_response(handler_response):
         sorted_list = sorted(mementos, key=itemgetter(1))
 
 
-    return (url_r, sorted_list)
+    return sorted_list

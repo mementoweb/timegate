@@ -9,11 +9,13 @@ import json
 
 import re
 
-from conf.constants import DATE_FORMAT, JSON_URI_PART, LINK_URI_PART,  TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
-from errors.timegateerrors import TimegateError, URIRequestError
+from conf.constants import DATE_FORMAT, JSON_URI_PART, LINK_URI_PART,  TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_ACTIVATED, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
+from errors.timegateerrors import TimegateError, URIRequestError, CacheError
 from core.cache import Cache
 from core.handler import validate_response, Handler
 from tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now
+
+from conf.constants import CACHE_EXP, CACHE_FILE, CACHE_RWLOCK, CACHE_DLOCK, CACHE_TOLERANCE
 
 # Initialization code
 # Logger configuration
@@ -58,13 +60,16 @@ except Exception as e:
     raise e
 
 # Cache loading
-try:
-    cache = Cache(enabled=CACHE_USE)
-except Exception as e:
-    logging.error("Exception during cache loading. Check permissions")
-    CACHE_USE = False
-    raise e
-
+cache_use = False
+if CACHE_ACTIVATED:
+    try:
+        cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_EXP, CACHE_RWLOCK, CACHE_DLOCK)
+        cache_use = True
+        logging.info("Cached started: cache file: %s, cache expiration: %d seconds, cache tolerance: %d seconds" % (CACHE_FILE, CACHE_EXP, CACHE_TOLERANCE))
+    except Exception as e:
+        logging.error("Exception during cache loading. Cache deactivated. Check permissions")
+else:
+    logging.info("Cache not used.")
 logging.info("Application loaded. Host: %s" % HOST)
 
 
@@ -249,17 +254,6 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
             mementos_links[0] = mementos_links[0].replace('rel="memento"', 'rel="first memento"')
             mementos_links[-1] = mementos_links[-1].replace('rel="memento"', 'rel="last memento"')
 
-        #mementos_links.insert(0, lastlink)
-        #mementos_links.insert(0, firstlink) #TODO remove
-        #link_self = '%s; from="%s"; until="%s"' % (
-        #     link_self, first_datestr, last_datestr)
-        #json_self = '%s; from="%s"; until="%s"' % (
-        #     json_self, first_datestr, last_datestr)
-        # link_self = '%s' % (
-        #     link_self)
-        # json_self = '%s' % (
-        #     json_self)
-
     # Aggregates all link strings and constructs the TimeMap body
     links = [original_link, timegate_link, link_self, json_self]
     links.extend(mementos_links)  # TODO modularizer ca...
@@ -296,8 +290,6 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
     # Browse through Mementos to find the first and the last
     # Generates TimeMap links list in the process
     mementos_links = []
-    # first_datestr = ''
-    # last_datestr = ''
     if mementos:
         first_url = mementos[0][0]
         first_date = mementos[0][1]
@@ -328,8 +320,6 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
     ret['timemap_uri'] = {
         'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource),
         'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
-        # 'from': first_datestr,
-        # 'until': last_datestr
     }
 
     body = json.dumps(ret)
@@ -357,7 +347,6 @@ def loadhandler(uri):
     :return: the handler object
     Raises URIRequestError if no handler matches this URI
     """
-
     if SINGLE_HANDLER:
         if not uri.startswith(api_handler.base):
             uri = api_handler.base + uri
@@ -372,6 +361,26 @@ def loadhandler(uri):
                 return (handler, uri)
 
     raise URIRequestError("Cannot find any handler for '%s'" % uri, 404)
+
+
+def get_and_cache(uri_r, getter, *args, **kwargs):
+    if cache_use:
+        return cache.refresh(uri_r, getter, *args, **kwargs)
+    else:
+        return validate_response(getter(*args, **kwargs))
+
+
+def get_if_cached(uri_r, accept_datetime=None):
+    if cache_use:
+        try:
+            if accept_datetime:
+                return cache.get_until(uri_r, accept_datetime)
+            else:
+                return cache.get_all(uri_r)
+        except CacheError as ce:
+            # cache_use = False
+            pass
+    return None
 
 
 def timegate(req_path, start_response, req_datetime):
@@ -397,26 +406,22 @@ def timegate(req_path, start_response, req_datetime):
     (handler, uri_r) = loadhandler(resource)
     # Runs the handler's API request for the Memento
     if hasattr(handler, 'getall'):  # TODO put in const
-        mementos = cache.get_until(uri_r, accept_datetime)
+        mementos = get_if_cached(uri_r, accept_datetime)
         if mementos is None:
             if hasattr(handler, 'getone'):
                 logging.debug('Using single-request mode.')
-                (uri, mementos) = validate_response(handler.getone(uri_r, accept_datetime))
+                mementos = validate_response(handler.getone(uri_r, accept_datetime))
             else:
                 logging.debug('Using multiple-request mode.')
-                mementos = cache.refresh(uri_r, handler.getall, uri_r)
+                mementos = get_and_cache(uri_r, handler.getall, uri_r)
     elif hasattr(handler, 'getone'):
-        (uri, mementos) = validate_response(handler.getone(uri_r, accept_datetime))
+        mementos = validate_response(handler.getone(uri_r, accept_datetime))
     else:
         logging.error("NotImplementedError: Handler has neither getone nor getall function.")
         raise TimegateError("NotImplementedError: Handler has neither getone nor getall function.", 502)  # TODO put in const
-    assert mementos
 
     # If the handler returned several Mementos, take the closest
     memento = best(mementos, accept_datetime, RESOURCE_TYPE)
-    # Generates the TimeGate response body and Headers
- #   if SINGLE_HANDLER:  # TODO clean
- #       uri_r = uri_r.replace(handler.base, '')
     return memento_response(memento, uri_r, resource, start_response, hasattr(handler, 'getall'))
 
 
@@ -439,18 +444,14 @@ def timemap(req_path, req_mime, start_response):
     (handler, uri_r) = loadhandler(resource)
 
     if hasattr(handler, 'getall'):
-        mementos = cache.get_all(uri_r)
+        mementos = get_if_cached(uri_r)
         if mementos is None:
-            mementos = cache.refresh(uri_r, handler.getall, uri_r)
+            mementos = get_and_cache(uri_r, handler.getall, uri_r)
     else:
         raise TimegateError("Handler cannot serve timemaps.", 400)  # TODO put in const
-    assert mementos
-
-    # if SINGLE_HANDLER:  # TODO clean
-    #     uri_r = uri_r.replace(handler.base, '')
 
     # Generates the TimeMap response body and Headers
     if req_mime.startswith(JSON_URI_PART):
         return timemap_json_response(mementos, uri_r, resource, start_response)
-    else:  # TODO define default (crash / link)
+    else:
         return timemap_link_response(mementos, uri_r, resource, start_response)

@@ -56,7 +56,7 @@ else:
 
 ## Cache
 # When False, all cache requests will be cache MISSes
-CACHE_USE = conf.getboolean('cache', 'activated')
+CACHE_ACTIVATED = conf.getboolean('cache', 'activated')
 # Cache values expire after one day.
 CACHE_EXP = conf.getint('cache', 'expiration_seconds')
 # Time window in which the cache value is considered young enough to be valid
