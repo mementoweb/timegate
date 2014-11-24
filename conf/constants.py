@@ -43,7 +43,7 @@ conf = ConfigParser()
 conf.read('conf/config.cfg')
 
 ## Server configuration
-HOST = unicode.encode(conf.get('server', 'host'), 'utf-8')
+HOST = unicode.encode(conf.get('server', 'host'), 'utf-8').rstrip('/')
 STRICT_TIME = conf.getboolean('server', 'strict_datetime')
 API_TIME_OUT = conf.getfloat('server', 'api_time_out')
 
