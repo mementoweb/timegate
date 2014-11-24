@@ -12,15 +12,12 @@ class ArxivHandler(Handler):
 
     def __init__(self):
         Handler.__init__(self)
-        self.resources = ['http://arxiv.org/abs/',
-                          'http://arxiv.org/pdf/']
-        self.base = 'http://arxiv.org/'
 
         self.rex = re.compile('(http://arxiv.org)/((?:pdf)|(?:abs))/(.+)')
 
         self.api_base = 'http://export.arxiv.org/oai2'
 
-    def getall(self, uri_r):
+    def get_all_mementos(self, uri_r):
         try:
             match = self.rex.match(uri_r)
             if match.groups()[1] == 'pdf':

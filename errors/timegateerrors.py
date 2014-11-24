@@ -7,6 +7,7 @@ class TimegateError(Exception):
         self.status = status
         super(TimegateError, self).__init__(msg)
 
+
 class TimeoutError(TimegateError):
 
     def __init__(self, msg, status=416):
@@ -19,12 +20,10 @@ class URIRequestError(TimegateError):
         super(URIRequestError, self).__init__(msg, status)
 
 
-
 class HandlerError(TimegateError):
 
     def __init__(self, msg, status=503):
         super(HandlerError, self).__init__(msg, status)
-
 
 
 class DateTimeError(TimegateError):

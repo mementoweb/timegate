@@ -40,15 +40,18 @@ TM_MAX_SIZE = 25000
 ### Configuration constants
 
 conf = ConfigParser()
-conf.read('conf/config.cfg')
+conf.read('conf/config.ini')
 
 ## Server configuration
 HOST = unicode.encode(conf.get('server', 'host'), 'utf-8').rstrip('/')
 STRICT_TIME = conf.getboolean('server', 'strict_datetime')
 API_TIME_OUT = conf.getfloat('server', 'api_time_out')
 
-## Handler(s) configuration
-SINGLE_HANDLER = conf.getboolean('handler', 'single')
+## Handler configuration
+if conf.has_option('handler', 'base_uri'):
+    BASE_URI = conf.get('handler', 'base_uri')
+else:
+    BASE_URI = ''
 if conf.getboolean('handler', 'is_vcs'):
     RESOURCE_TYPE = 'vcs'
 else:
@@ -57,12 +60,12 @@ else:
 ## Cache
 # When False, all cache requests will be cache MISSes
 CACHE_ACTIVATED = conf.getboolean('cache', 'activated')
-# Cache values expire after one day.
-CACHE_EXP = conf.getint('cache', 'expiration_seconds')
 # Time window in which the cache value is considered young enough to be valid
-CACHE_TOLERANCE = conf.getint('cache', 'tolerance_seconds')
+CACHE_TOLERANCE = conf.getint('cache', 'refresh_time')
 # Cache files paths
-CACHE_FILE = conf.get('cache', 'fdata')
-CACHE_RWLOCK = conf.get('cache', 'flock')
-CACHE_DLOCK = conf.get('cache', 'fdogpile')
+CACHE_DIRECTORY = conf.get('cache', 'cache_directory').rstrip('/')
+# Cache files paths
+CACHE_FILE = CACHE_DIRECTORY + '/cache_data'
+CACHE_RWLOCK = CACHE_DIRECTORY + '/cache_rwlock'
+CACHE_DLOCK = CACHE_DIRECTORY + '/cache_dlock'
 

@@ -22,8 +22,6 @@ class GitHubHandler(Handler):
         self.resources = ['https://github.com/.+',
                           'https://raw.githubusercontent.com/']
 
-        self.base = 'https://'
-
         # Local fields
         self.api = 'https://api.github.com'
 
@@ -38,7 +36,7 @@ class GitHubHandler(Handler):
         self.header_rex = re.compile('<(.+?)>; rel="next"')  # The regex for the query continuation header
         self.file_rex = re.compile('(/blob)?/master')  # The regex for files
 
-    def getall(self, uri):
+    def get_all_mementos(self, uri):
         MAX_TIME = 20 #seconds
 
         # URI deconstruction

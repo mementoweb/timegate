@@ -1,3 +1,5 @@
+from core import tgutils
+
 __author__ = 'Yorick Chollet'
 
 from dateutil.relativedelta import relativedelta
@@ -6,12 +8,11 @@ from dogpile.cache import make_region
 
 from errors.timegateerrors import HandlerError, CacheError
 from handler import validate_response
-import tgutils
 
 
 class Cache:
 
-    def __init__(self, file, tolerance, expiration, rwlock, dlock):
+    def __init__(self, file, tolerance, rwlock, dlock):
         """
         Constructor method
         :param tolerance: The tolerance, in seconds to which a TimeMap is considered young enough to be used as is.
@@ -20,10 +21,11 @@ class Cache:
         every get will be a CACHE MISS.
         :return:
         """
+
+        # TODO add LRU somewhere environ 100MB
         self.tolerance = relativedelta(seconds=tolerance)
         self.backend = make_region().configure(
             'dogpile.cache.dbm',
-            expiration_time=expiration,
             arguments={
                 'filename': file,
                 'rw_lockfile': rwlock,

@@ -5,12 +5,10 @@ __author__ = 'Yorick Chollet'
 from core.handler import Handler
 from errors.timegateerrors import HandlerError
 
-from tgutils import date_str
+from core.tgutils import date_str
 
 
 class MediaWikiHandler(Handler):
-
-
 
     def __init__(self):
         Handler.__init__(self)
@@ -25,7 +23,7 @@ class MediaWikiHandler(Handler):
     #     return self.query(uri, params)
 
     # This example requires the datetime
-    def getone(self, uri, accept_datetime):
+    def get_memento(self, uri, accept_datetime):
         timestamp = date_str(accept_datetime, self.TIMESTAMPFMT)
         params = {
             'rvlimit': 1,  # Only need one

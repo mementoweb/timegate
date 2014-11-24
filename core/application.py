@@ -6,16 +6,14 @@ import glob
 import logging
 import json
 
-
-import re
-
-from conf.constants import DATE_FORMAT, JSON_URI_PART, LINK_URI_PART,  TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_ACTIVATED, STRICT_TIME, HOST, SINGLE_HANDLER, RESOURCE_TYPE
+from core.constants import DATE_FORMAT, JSON_URI_PART, LINK_URI_PART,  TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_ACTIVATED, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI
 from errors.timegateerrors import TimegateError, URIRequestError, CacheError
 from core.cache import Cache
 from core.handler import validate_response, Handler
-from tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now
+from core.tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now
+from core.constants import CACHE_FILE, CACHE_RWLOCK, CACHE_DLOCK, CACHE_TOLERANCE
 
-from conf.constants import CACHE_EXP, CACHE_FILE, CACHE_RWLOCK, CACHE_DLOCK, CACHE_TOLERANCE
+
 
 # Initialization code
 # Logger configuration
@@ -24,12 +22,9 @@ from conf.constants import CACHE_EXP, CACHE_FILE, CACHE_RWLOCK, CACHE_DLOCK, CAC
 logging.basicConfig(filemode='w', format=LOG_FORMAT, level=logging.INFO)
 logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
-# Handler(s) Loading
-handlers_ct = 0
-if SINGLE_HANDLER:
-    api_handler = None
-else:
-    mapper = []
+# Handler Loading
+found_handlers = 0
+api_handler = None
 try:
     # Finds the paths of every python modules in the extensions folder
     files = [filename[:-3] for filename in glob.glob(EXTENSIONS_PATH+"*.py")]
@@ -44,17 +39,12 @@ try:
             if (str(handler_class) == (module_identifier + '.' + name)
                     and issubclass(handler_class, Handler)):
                 api_handler = handler_class()
-                handlers_ct += 1
+                found_handlers += 1
                 logging.info("Found handler %s" % handler_class)
-                if SINGLE_HANDLER and handlers_ct > 1:
-                    raise Exception("More than one python class file in %s.\n    If you intend to use several handlers, modify the configuration in conf/config.cfg" % EXTENSIONS_PATH)
-                else:
-                # Maps all URI regular expressions that the handlers manages to it
-                    for regex in api_handler.resources:
-                        mapper.append((re.compile(regex), api_handler))
-    logging.info("Loaded %d handler(s)" % handlers_ct)
-    if handlers_ct == 0:
-        raise Exception("No handler found in %s . \n    Ensure that the handler are subclasses of `Handler`." % EXTENSIONS_PATH)
+                if found_handlers > 1:
+                    raise Exception("More than one Handler class file in %s." % EXTENSIONS_PATH)
+    if found_handlers == 0:
+        raise Exception("No handler found in %s . \n    Make sure that the handler is a subclass of `Handler` of module core.handler." % EXTENSIONS_PATH)
 except Exception as e:
     logging.error("Exception during handler loading: %s" % e.message)
     raise e
@@ -63,9 +53,9 @@ except Exception as e:
 cache_use = False
 if CACHE_ACTIVATED:
     try:
-        cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_EXP, CACHE_RWLOCK, CACHE_DLOCK)
+        cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_RWLOCK, CACHE_DLOCK)
         cache_use = True
-        logging.info("Cached started: cache file: %s, cache expiration: %d seconds, cache tolerance: %d seconds" % (CACHE_FILE, CACHE_EXP, CACHE_TOLERANCE))
+        logging.info("Cached started: cache file: %s, cache refresh: %d seconds" % (CACHE_FILE, CACHE_TOLERANCE))
     except Exception as e:
         logging.error("Exception during cache loading. Cache deactivated. Check permissions")
 else:
@@ -305,28 +295,13 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
 
 def loadhandler(uri):
     """
-    Loads the first handler for the requested URI if it exists.
+    Loads the handler for the requested URI if it exists.
     :param uri: The URI to match to a handler
-    :param singlerequest: Boolean indicating if the requests is for a single
-    memento (true) or for a timemap (false). If False (default), then the handler MUST allow
-    batch requests.
     :return: the handler object
-    Raises URIRequestError if no handler matches this URI
     """
-    if SINGLE_HANDLER:
-        if not uri.startswith(api_handler.base):
-            uri = api_handler.base + uri
-        return (api_handler, uri)
-    else:
-        #Finds the first handler which regex match with the requested URI-R
-        for (regex, handler) in mapper:
-            if bool(regex.match(uri)):
-                logging.debug("%s matched pattern %s of handler %s" % (uri, regex.pattern, handler))
-                if not uri.startswith(handler.base):
-                    uri = handler.base + uri
-                return (handler, uri)
-
-    raise URIRequestError("Cannot find any handler for '%s'" % uri, 404)
+    if not uri.startswith(BASE_URI):
+        uri = BASE_URI + uri
+    return (api_handler, uri)
 
 
 def get_and_cache(uri_r, getter, *args, **kwargs):
@@ -371,24 +346,24 @@ def timegate(req_path, start_response, req_datetime):
     # Dynamically loads the handler for that resource
     (handler, uri_r) = loadhandler(resource)
     # Runs the handler's API request for the Memento
-    if hasattr(handler, 'getall'):  # TODO put in const
+    if hasattr(handler, 'get_all_mementos'):  # TODO put in const
         mementos = get_if_cached(uri_r, accept_datetime)
         if mementos is None:
-            if hasattr(handler, 'getone'):
+            if hasattr(handler, 'get_memento'):
                 logging.debug('Using single-request mode.')
-                mementos = validate_response(handler.getone(uri_r, accept_datetime))
+                mementos = validate_response(handler.get_memento(uri_r, accept_datetime))
             else:
                 logging.debug('Using multiple-request mode.')
-                mementos = get_and_cache(uri_r, handler.getall, uri_r)
-    elif hasattr(handler, 'getone'):
-        mementos = validate_response(handler.getone(uri_r, accept_datetime))
+                mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
+    elif hasattr(handler, 'get_memento'):
+        mementos = validate_response(handler.get_memento(uri_r, accept_datetime))
     else:
-        logging.error("NotImplementedError: Handler has neither getone nor getall function.")
-        raise TimegateError("NotImplementedError: Handler has neither getone nor getall function.", 502)  # TODO put in const
+        logging.error("NotImplementedError: Handler has neither get_memento nor get_all_mementos function.")
+        raise TimegateError("NotImplementedError: Handler has neither get_memento nor get_all_mementos function.", 502)  # TODO put in const
 
     # If the handler returned several Mementos, take the closest
     memento = best(mementos, accept_datetime, RESOURCE_TYPE)
-    return memento_response(memento, uri_r, resource, start_response, hasattr(handler, 'getall'))
+    return memento_response(memento, uri_r, resource, start_response, hasattr(handler, 'get_all_mementos'))
 
 
 def timemap(req_path, req_mime, start_response):
@@ -402,17 +377,17 @@ def timemap(req_path, req_mime, start_response):
     :return: The body of the HTTP response
     """
     if not (req_mime == JSON_URI_PART or req_mime == LINK_URI_PART):
-        raise URIRequestError('Mime type (%s) unknown. must be %s or %s'
+        raise URIRequestError('Mime type (%s) empty or unknown. Request must be GET timemap/%s/... or GET timemap/%s/... '
                               % (req_mime, JSON_URI_PART, LINK_URI_PART), 400)
 
     resource = validate_req_uri(req_path)
     # Dynamically loads the handler for that resource.
     (handler, uri_r) = loadhandler(resource)
 
-    if hasattr(handler, 'getall'):
+    if hasattr(handler, 'get_all_mementos'):
         mementos = get_if_cached(uri_r)
         if mementos is None:
-            mementos = get_and_cache(uri_r, handler.getall, uri_r)
+            mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
     else:
         raise TimegateError("Handler cannot serve timemaps.", 400)  # TODO put in const
 

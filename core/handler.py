@@ -1,13 +1,14 @@
+from core import tgutils
+
 __author__ = 'Yorick Chollet'
 
-import requests
 import logging
 from operator import itemgetter
 
-import tgutils
-from errors.timegateerrors import HandlerError
+import requests
 
-from conf.constants import TM_MAX_SIZE, API_TIME_OUT
+from errors.timegateerrors import HandlerError
+from core.constants import TM_MAX_SIZE, API_TIME_OUT
 
 
 class Handler:
@@ -17,30 +18,8 @@ class Handler:
 
 
     def __init__(self):
-        # List of regex strings for the original resources that the handler manages
-        self.resources = []
-        self.base = ''
-
-    # def getone(self, uri_r, datetime):
-    #     """
-    #     Requests one Memento for a resource and a datetime
-    #
-    #     :param uri_r: the generic URI of the resource
-    #     :param datetime: Optional datetime to target specific Mementos as a dateutil object
-    #     :return: 2-Array of tuples (URI, Datetime) where Datetime = None for the
-    #     original resource generic URI.
-    #     """
-    #     raise NotImplementedError
-    #
-    # def getall(self, uri_r):
-    #     """
-    #     Requests the mementos for a resource.
-    #
-    #     :param uri_r: the generic URI of the resource
-    #     :return: Array of tuples (URI, Datetime) where Datetime = None for the
-    #     original resource generic URI.
-    #     """
-    #     raise NotImplementedError
+        pass
+        # assert not (hasattr(self, 'get_memento') or hasattr(self, 'get_all_mementos'))
 
 
     def request(self, resource, timeout=API_TIME_OUT, **kwargs):

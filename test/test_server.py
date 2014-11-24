@@ -1,82 +1,70 @@
 # -*- coding: utf-8 -*-
+from core import application
+
 __author__ = 'Yorick Chollet'
 
 import time
 import unittest  # Python unit test structure
+
 from webtest import TestApp  # WSGI application tester
 
-import application
-from conf.constants import TIMEMAP_URI_PART, TIMEGATE_URI_PART
-from conf.constants import DATE_FORMAT
+from core.constants import TIMEMAP_URI_PART, TIMEGATE_URI_PART
+from core.constants import DATE_FORMAT
 
-from test.apistub import application as apistub
 
 server = TestApp(application.application)
-api = TestApp(apistub)
 
 DATEHEADER = 'Wed, 15 Oct 2014 20:40:19 GMT'
 
-
-class TestServerSequence(unittest.TestCase):
-
-    def test_server_up(self):
-        response = server.get('/test/', status=200)
-        assert len(response.normal_body) > 1
-
-    def test_server_tgroot_status(self):
-        response = server.get('/%s/' % TIMEGATE_URI_PART, status=400)
-
-    def test_server_tmroot_status(self):
-        response = server.get('/%s/' % TIMEMAP_URI_PART, status=400)
-
-    def test_dateOK(self):
-        timestr = time.strftime(DATE_FORMAT, time.gmtime())
-        ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/uri' % TIMEGATE_URI_PART, headers=ad, status=200)
-
-    def test_dateWRONG(self):
-        timestr = time.strftime("å/ンページ/ %s /הצלת", time.gmtime())
-        ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/uri' % TIMEGATE_URI_PART, headers=ad, status=400)
-
-    def test_urlOK(self):
-        timestr = time.strftime(DATE_FORMAT, time.gmtime())
-        ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/http://www.example.com/resource/' % TIMEGATE_URI_PART, headers=ad, status=200)
-
-    def test_urlTRUNKATED(self):
-        timestr = time.strftime(DATE_FORMAT, time.gmtime())
-        ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/example.com/resource' % TIMEGATE_URI_PART, headers=ad, status=200)
-
-    def test_urlINEXISTANT(self):
-        timestr = time.strftime(DATE_FORMAT, time.gmtime())
-        ad = {'Accept-Datetime': timestr}
-        response = server.get('/%s/http://www.wrong.url/' % TIMEGATE_URI_PART, headers=ad, status=200)
-
-    def test_urlUNSAFE(self):
-        timestr = time.strftime(DATE_FORMAT, time.gmtime())
-        ad = {'Accept-Datetime': timestr}
-        url = """/timegate/http://www.wrong.url/å/ンページ/  /הצלת/é/"""
-        response = server.get(url, headers=ad, status=200)
-
-    def test_urlNOSLASHR(self):
-        timestr = time.strftime(DATE_FORMAT, time.gmtime())
-        ad = {'Accept-Datetime': timestr}
-        url = """/timegatewww.wrong.url"""
-        response = server.get(url, headers=ad, status=404)
-
-class TestServerHandlerSeq(unittest.TestCase):
-
-    def test_stub_up(self):
-        response = api.get('/test/', status=404)
-        assert len(response.normal_body) > 1
-
-    def test_flow(self):
-        api = TestApp(apistub)
-        timestr = time.strftime(DATE_FORMAT, time.gmtime())
-        ad = {'Accept-Datetime': timestr}
-        response = server.get('/timegate/example.com/', headers=ad, status=200)
+#
+# class TestServerSequence(unittest.TestCase):
+#
+#     def test_server_up(self):
+#         response = server.get('/test/', status=200)
+#         assert len(response.normal_body) > 1
+#
+#     def test_server_tgroot_status(self):
+#         response = server.get('/%s/' % TIMEGATE_URI_PART, status=400)
+#
+#     def test_server_tmroot_status(self):
+#         response = server.get('/%s/' % TIMEMAP_URI_PART, status=400)
+#
+#     def test_dateOK(self):
+#         timestr = time.strftime(DATE_FORMAT, time.gmtime())
+#         ad = {'Accept-Datetime': timestr}
+#         response = server.get('/%s/uri' % TIMEGATE_URI_PART, headers=ad, status=200)
+#
+#     def test_dateWRONG(self):
+#         timestr = time.strftime("å/ンページ/ %s /הצלת", time.gmtime())
+#         ad = {'Accept-Datetime': timestr}
+#         response = server.get('/%s/uri' % TIMEGATE_URI_PART, headers=ad, status=400)
+#
+#     def test_urlOK(self):
+#         timestr = time.strftime(DATE_FORMAT, time.gmtime())
+#         ad = {'Accept-Datetime': timestr}
+#         response = server.get('/%s/http://www.example.com/resource/' % TIMEGATE_URI_PART, headers=ad, status=200)
+#
+#     def test_urlTRUNKATED(self):
+#         timestr = time.strftime(DATE_FORMAT, time.gmtime())
+#         ad = {'Accept-Datetime': timestr}
+#         response = server.get('/%s/example.com/resource' % TIMEGATE_URI_PART, headers=ad, status=200)
+#
+#     def test_urlINEXISTANT(self):
+#         timestr = time.strftime(DATE_FORMAT, time.gmtime())
+#         ad = {'Accept-Datetime': timestr}
+#         response = server.get('/%s/http://www.wrong.url/' % TIMEGATE_URI_PART, headers=ad, status=200)
+#
+#     def test_urlUNSAFE(self):
+#         timestr = time.strftime(DATE_FORMAT, time.gmtime())
+#         ad = {'Accept-Datetime': timestr}
+#         url = """/timegate/http://www.wrong.url/å/ンページ/  /הצלת/é/"""
+#         response = server.get(url, headers=ad, status=200)
+#
+#     def test_urlNOSLASHR(self):
+#         timestr = time.strftime(DATE_FORMAT, time.gmtime())
+#         ad = {'Accept-Datetime': timestr}
+#         url = """/timegatewww.wrong.url"""
+#         response = server.get(url, headers=ad, status=404)
 
 class TestServerRealSeq(unittest.TestCase):
 
@@ -127,7 +115,5 @@ class TestServerRealSeq(unittest.TestCase):
 
 def suite():
     st = unittest.TestSuite()
-    # st.addTest(unittest.makeSuite(TestServerSequence))
-    # st.addTest(unittest.makeSuite(TestServerHandlerSeq))
     st.addTest(unittest.makeSuite(TestServerRealSeq))
     return st

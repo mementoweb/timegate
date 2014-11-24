@@ -11,9 +11,6 @@ class AWOIAFHandler(MediaWikiHandler):
     def __init__(self):
         MediaWikiHandler.__init__(self)
         # Mandatory fields
-        self.resources = ['http://awoiaf.westeros.org/index.php/.+']
-
-        self.base = 'http://awoiaf.westeros.org/index.php/'
 
         # Local fields, the uri pattern of a resource
         self.rex = re.compile('(.+)(/index.php/)(.+)')

@@ -24,7 +24,7 @@ def application(env, start_response):
                     "link_format": "http://an.archive.org/timemap/link/http://foo.bar/"
                 },
                 "mementos": {
-                    "first": {
+                   "first": {
                         "datetime": "2000-06-21T04:41:56Z",
                         "uri": "http://an.archive.org/20000621044156/http://www.foo.bar/"
                     },

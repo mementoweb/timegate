@@ -1,13 +1,13 @@
 __author__ = 'Yorick Chollet'
 
 import logging
+from urlparse import urlparse
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_datestr
 from dateutil.tz import tzutc
-from urlparse import urlparse
 
-from conf.constants import DATE_FORMAT
+from core.constants import DATE_FORMAT
 from errors.timegateerrors import URIRequestError, DateTimeError
 
 
