@@ -16,11 +16,9 @@ class Handler:
     # Disables all 'requests' module event logs that are at least not WARNINGS
     logging.getLogger('requests').setLevel(logging.WARNING)
 
-
     def __init__(self):
         pass
         # assert not (hasattr(self, 'get_memento') or hasattr(self, 'get_all_mementos'))
-
 
     def request(self, resource, timeout=API_TIME_OUT, **kwargs):
         """
@@ -38,7 +36,8 @@ class Handler:
                 uri, '&'.join(map(lambda(k, v): '%s=%s' % (k, v),
                                                 kwargs['params'].items()))))
         except Exception as e:
-            pass # Key errors on 'params'
+            # Key errors on 'params'
+            logging.info("Sending API request for %s" % uri)
 
         try:
             req = requests.get(uri, timeout=timeout, **kwargs)
