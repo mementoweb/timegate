@@ -6,7 +6,7 @@ import glob
 import logging
 import json
 
-from core.constants import DATE_FORMAT, JSON_URI_PART, LINK_URI_PART,  TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_ACTIVATED, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI
+from core.constants import DATE_FORMAT, CACHE_EXP, CACHE_MAX_SIZE, JSON_URI_PART, LINK_URI_PART,  TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_ACTIVATED, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI
 from errors.timegateerrors import TimegateError, URIRequestError, CacheError
 from core.cache import Cache
 from core.handler import validate_response, Handler
@@ -19,7 +19,7 @@ from core.constants import CACHE_FILE, CACHE_RWLOCK, CACHE_DLOCK, CACHE_TOLERANC
 # Logger configuration
 # logging.basicConfig(filename=LOG_FILE, filemode='w',
 #                     format=LOG_FMT, level=logging.INFO) # release
-logging.basicConfig(filemode='w', format=LOG_FORMAT, level=logging.INFO)
+logging.basicConfig(filemode='w', format=LOG_FORMAT, level=logging.DEBUG)
 logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
 # Handler Loading
@@ -53,9 +53,9 @@ except Exception as e:
 cache_use = False
 if CACHE_ACTIVATED:
     try:
-        cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_RWLOCK, CACHE_DLOCK)
+        cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE, CACHE_EXP, CACHE_RWLOCK, CACHE_DLOCK)
         cache_use = True
-        logging.info("Cached started: cache file: %s, cache refresh: %d seconds" % (CACHE_FILE, CACHE_TOLERANCE))
+        logging.info("Cached started: cache file: %s, cache refresh: %d seconds, max_size: %d Bytes" % (CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE))
     except Exception as e:
         logging.error("Exception during cache loading. Cache deactivated. Check permissions")
 else:
@@ -71,6 +71,7 @@ def application(env, start_response):
     :param start_response: Callback function used to send HTTP status and headers to the server.
     :return: The response body.
     """
+    # print "cache size at entry:%d" % cache.getsize()
 
     # Extracting requested values
     req = env.get('PATH_INFO', '/')
@@ -319,7 +320,7 @@ def get_if_cached(uri_r, accept_datetime=None):
             else:
                 return cache.get_all(uri_r)
         except CacheError as ce:
-            # cache_use = False
+            # cache_use = False TODO fix
             pass
     return None
 

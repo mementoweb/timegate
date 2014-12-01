@@ -64,8 +64,11 @@ CACHE_ACTIVATED = conf.getboolean('cache', 'activated')
 CACHE_TOLERANCE = conf.getint('cache', 'refresh_time')
 # Cache files paths
 CACHE_DIRECTORY = conf.get('cache', 'cache_directory').rstrip('/')
+# Cache data file maximum size (in bytes)
+CACHE_MAX_SIZE = long(conf.getfloat('cache', 'cache_max_size') * 1e+6)
 # Cache files paths
 CACHE_FILE = CACHE_DIRECTORY + '/cache_data'
 CACHE_RWLOCK = CACHE_DIRECTORY + '/cache_rwlock'
 CACHE_DLOCK = CACHE_DIRECTORY + '/cache_dlock'
-
+# Cache expiration (space bound) in seconds
+CACHE_EXP = 259200 # Three days
