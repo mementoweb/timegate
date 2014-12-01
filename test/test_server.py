@@ -72,22 +72,22 @@ class TestServerRealSeq(unittest.TestCase):
         ad = {'Accept-Datetime': DATEHEADER}
         response = server.get('/%s/https://github.com/mementoweb/timegate' % TIMEGATE_URI_PART, headers=ad, status=302)
         response = server.get('/%s/https://github.com/mementoweb/timegate/tree/master/core' % TIMEGATE_URI_PART, headers=ad, status=302)
-        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/timegate/master/core/extensions/example3.py' % TIMEGATE_URI_PART, headers=ad, status=302)
-        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/example3.py' % TIMEGATE_URI_PART, headers=ad, status=302)
+        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/timegate/master/core/extension/example3.py' % TIMEGATE_URI_PART, headers=ad, status=302)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extension/example3.py' % TIMEGATE_URI_PART, headers=ad, status=302)
 
     def test_TM_github_all_resources(self):
         ad = {'Accept-Datetime': 'none'}
         response = server.get('/%s/https://github.com/mementoweb/timegate' % TIMEMAP_URI_PART, headers=ad, status=200)
         response = server.get('/%s/https://github.com/mementoweb/timegate/tree/master/core' % TIMEMAP_URI_PART, headers=ad, status=200)
-        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/timegate/master/core/extensions/example3.py' % TIMEMAP_URI_PART, headers=ad, status=200)
-        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/example3.py' % TIMEMAP_URI_PART, headers=ad, status=200)
+        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/timegate/master/core/extension/example3.py' % TIMEMAP_URI_PART, headers=ad, status=200)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extension/example3.py' % TIMEMAP_URI_PART, headers=ad, status=200)
 
     def test_github_404s(self):
         ad = {'Accept-Datetime': DATEHEADER}
         response = server.get('/%s/https://github.com/memento2web/timegate' % TIMEMAP_URI_PART, headers=ad, status=404)
         response = server.get('/%s/https://github.com/meme/2/ntoweb/timegate/tree/master/core' % TIMEMAP_URI_PART, headers=ad, status=404)
-        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/tim/egate/master/core/extensions/example3.py' % TIMEMAP_URI_PART, headers=ad, status=404)
-        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extensions/exajmple3.py' % TIMEMAP_URI_PART, headers=ad, status=404)
+        response = server.get('/%s/https://raw.githubusercontent.com/mementoweb/tim/egate/master/core/extension/example3.py' % TIMEMAP_URI_PART, headers=ad, status=404)
+        response = server.get('/%s/https://github.com/mementoweb/timegate/blob/master/core/extension/exajmple3.py' % TIMEMAP_URI_PART, headers=ad, status=404)
 
 
     def test_github_bad_req(self):

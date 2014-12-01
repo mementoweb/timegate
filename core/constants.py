@@ -27,7 +27,7 @@ MIME_TYPE_LINK = 'application/link-format'
 JSON_URI_PART = 'json'
 LINK_URI_PART = 'link'
 
-EXTENSIONS_PATH = 'core/extensions/'
+EXTENSIONS_PATH = 'core/extension/'
 
 LOG_FORMAT = '%(asctime)s | %(levelname)s| %(message)s'
 LOG_FILE = 'log.txt'

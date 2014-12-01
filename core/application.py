@@ -26,7 +26,7 @@ logging.getLogger('uwsgi').setLevel(logging.WARNING)
 found_handlers = 0
 api_handler = None
 try:
-    # Finds the paths of every python modules in the extensions folder
+    # Finds the paths of every python modules in the extension folder
     files = [filename[:-3] for filename in glob.glob(EXTENSIONS_PATH+"*.py")]
     for module_path in files:
         # Imports the python module

@@ -10,7 +10,6 @@ import logging
 from errors.timegateerrors import HandlerError
 
 __author__ = "aalsum, Yorick Chollet"
-__date__ = "$Mar 6, 2013 12:07:59 PM$"
 
 baseuri = "http://haw.nsk.hr/json.php?"
 
