@@ -1,4 +1,4 @@
-# Memento proxy for Portuguese Web Archive arquivo.pt
+__author__ = "Robert Sanderson, Yorick Chollet"
 
 import logging
 from lxml import etree
@@ -6,34 +6,39 @@ import StringIO
 from errors.timegateerrors import HandlerError
 from core.handler import Handler
 
-__author__ = "aalsum, Yorick Chollet"
 
-
-class PoHandler(Handler):
+class SsHandler(Handler):
 
     def __init__(self):
         Handler.__init__(self)
-        self.baseuri = "http://arquivo.pt/wayback/wayback/xmlquery?type=urlquery&url="
+        self.baseuri = "http://www.screenshots.com/"
 
     def get_all_mementos(self, req_url):
         # implement the changes list for this particular proxy
-        param = {'url': req_url,
-                 'type': 'urlquery'}
+
+        if req_url.startswith('http://'):
+            req_url = req_url[7:]
+        elif req_url.startswith('https://'):
+            req_url = req_url[8:]
 
         changes = []
 
-        uri = self.baseuri + req_url
-        dom = self.get_xml(uri)
+        if req_url[-1] == '/':
+            req_url = req_url[:-1]
+        if req_url.find('/') > -1:
+            return changes
+        
+        uri = self.baseuri + req_url + '/'
+        dom = self.get_xml(uri, html=True)
         if dom:
-            rlist = dom.xpath('/wayback/results/result')
+            rlist = dom.xpath('//img')
             for a in rlist:
-                dtstr = a.xpath('./capturedate/text()')[0]
-                url = a.xpath('./url/text()')[0]
-                loc = "http://arquivo.pt/wayback/wayback/%s/%s" % (dtstr, url)
-
-                dtstr += " GMT"
-                changes.append((loc, dtstr))
-
+                if 'class' in a.attrib:
+                    if a.attrib['class'].startswith('sliderThumb'):
+                        dtstr = a.attrib['name']
+                        loc = a.attrib['longdesc']
+                        dtstr += " 12:00:00 GMT"
+                        changes.append((loc, dtstr))
         return changes
 
     def get_xml(self, uri, html=False):
