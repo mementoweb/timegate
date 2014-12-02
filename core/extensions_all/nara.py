@@ -23,8 +23,6 @@ class NaraHandler(Handler):
             self.collections.append("congress%sth" % congress_number)
             congress_number += 1
 
-
-
     def get_all_mementos(self, requri):
         # implement the changes list for this particular proxy
         changes = []
@@ -51,8 +49,6 @@ class NaraHandler(Handler):
                                 changes.append((loc, dtstr))
 
         return changes
-
-
 
     def get_xml(self, uri, html=False):
         """
