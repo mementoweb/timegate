@@ -1,14 +1,8 @@
 from core import tgutils
-import os, sys
-import hashlib
-from operator import itemgetter
-
-
 __author__ = 'Yorick Chollet'
 
 from dateutil.relativedelta import relativedelta
 import logging
-from dogpile.cache import make_region
 
 from errors.timegateerrors import HandlerError, CacheError
 from handler import validate_response
@@ -18,7 +12,7 @@ from werkzeug.contrib.cache import FileSystemCache
 
 class Cache:
 
-    def __init__(self, path, tolerance, max_size, expiration, rwlock, dlock):
+    def __init__(self, path, tolerance, expiration, max_size):
         """
         Constructor method
         :param tolerance: The tolerance, in seconds to which a TimeMap is considered young enough to be used as is.
@@ -30,29 +24,14 @@ class Cache:
 
         # TODO add LRU somewhere environ 100MB
         self.tolerance = relativedelta(seconds=tolerance)
-        self.path = path.rstrip('/') # +'.db'
-        self.max_size = max_size # in Bytes
-        # self.backend = make_region().configure(
-        #     'dogpile.cache.dbm',
-        #     expiration_time=expiration,
-        #     arguments={
-        #         'filename': data_file,
-        #         'rw_lockfile': rwlock,
-        #         'dogpile_lockfile': dlock
-        #     }
-        # )
+        self.path = path.rstrip('/')  # +'.db'
+        average_file_size = 1e+5
+        self.max_values = int(max_size / average_file_size)
 
         self.backend = FileSystemCache(path,
-                                       threshold=500,
+                                       threshold=3,  # self.max_values
                                        default_timeout=expiration)  # TODO configurations
-        usages, counts = self.backend.get_many('usages', 'counts')
-        if not usages:
-            usages = {}
-        if not counts:
-            counts = {}
-        self.backend.set('usages', usages)
-        self.backend.set('counts', counts)
-        # logging.debug("Cache created. Size: %d. usages: %s. couts: %s" % (self.getsize(), usages, counts))
+        logging.debug("Cache created. max_files = %d. Expiration = %d " % (self.max_values, expiration))
 
     def get_until(self, uri_r, date):
         """ # TODO recomment
@@ -70,17 +49,11 @@ class Cache:
         """
         # Query the backend for stored cache values to that memento
         key = uri_r
-        # mutex = self.backend.backend.get_mutex(key)
         try:
-            # mutex.acquire()
-            # self.increment_count(key)
             val = self.backend.get(key)
         except Exception as e:
             logging.error("Exception loading cache content: %s" % e.message)
             raise CacheError("Exception loading cache content")
-        finally:
-            pass
-            # mutex.release()
 
         if val:
             # There is a value in the cache
@@ -137,23 +110,11 @@ class Cache:
         timestamp = tgutils.now()
         val = (timestamp, timemap)
         key = uri_r
-        # mutex = self.backend.backend.get_mutex(key)
         try:
-            # mutex.acquire()
-            # self.increment_count(key)
-            # size_before = self.getsize(uri_r)
-            ret = self.backend.set(key, val)
-            # size_after = self.getsize(uri_r)
-            # print "Size at backend.set() BF: %d, AF:%d " % (size_before, size_after)
-            # self.increment_usage(key, sys.getsizeof(val))
-            # if size_after > self.max_size:
-            #     self.cleanup(20)  # TODO push to const
+            self.backend.set(key, val)
         except Exception as e:
             logging.error("Error setting cache value: %s" % e.message)
             raise CacheError("Error setting cache value")
-        finally:
-            pass
-            # mutex.release()
 
 #     def getsize(self, uri=''):
 #         if uri:
@@ -219,4 +180,3 @@ class Cache:
 #     m = hashlib.md5()
 #     m.update(uri)
 #     return m.hexdigest()
-#

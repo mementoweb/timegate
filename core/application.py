@@ -6,12 +6,12 @@ import glob
 import logging
 import json
 
-from core.constants import DATE_FORMAT, CACHE_EXP, CACHE_MAX_SIZE, JSON_URI_PART, LINK_URI_PART,  TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_ACTIVATED, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI
+from core.constants import DATE_FORMAT, CACHE_EXP, JSON_URI_PART, LINK_URI_PART,  TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_ACTIVATED, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI
 from errors.timegateerrors import TimegateError, URIRequestError, CacheError
 from core.cache import Cache
 from core.handler import validate_response, Handler
 from core.tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now
-from core.constants import CACHE_FILE, CACHE_RWLOCK, CACHE_DLOCK, CACHE_TOLERANCE
+from core.constants import CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE
 
 
 
@@ -53,7 +53,7 @@ except Exception as e:
 cache_use = False
 if CACHE_ACTIVATED:
     try:
-        cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE, CACHE_EXP, CACHE_RWLOCK, CACHE_DLOCK)
+        cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_EXP, CACHE_MAX_SIZE)
         cache_use = True
         logging.info("Cached started: cache file: %s, cache refresh: %d seconds, max_size: %d Bytes" % (CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE))
     except Exception as e:
