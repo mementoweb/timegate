@@ -46,7 +46,7 @@ try:
     if found_handlers == 0:
         raise Exception("No handler found in %s . \n    Make sure that the handler is a subclass of `Handler` of module core.handler." % EXTENSIONS_PATH)
 except Exception as e:
-    logging.error("Exception during handler loading: %s" % e.message)
+    logging.critical("Exception during handler loading: %s" % e.message)
     raise e
 
 # Cache loading
@@ -86,7 +86,7 @@ def application(env, start_response):
     if req_met != 'GET' and req_met != 'HEAD':
         status = 405
         message = "Request method '%s' not allowed." % req_met
-        return error_response(status, message, start_response)
+        return error_response(status, start_response, message)
 
     # Processing request service type and path
     req = req.lstrip('/')
@@ -103,7 +103,8 @@ def application(env, start_response):
                 raise TimegateError("Incomplete timegate request. \n"
                                     "    Syntax: GET /timegate/:resource", 400)
         except TimegateError as e:
-            return error_response(e.status, e.message, start_response)
+            logging.info("End of timegate request due to TimegateError : %s" % e.message)
+            return error_response(e.status, start_response, e.message)
 
     # Serving TimeMap Request
     elif req_type == TIMEMAP_URI_PART:
@@ -118,17 +119,18 @@ def application(env, start_response):
                 raise TimegateError("Incomplete timemap request. \n"
                                     "    Syntax: GET /timemap/:type/:resource", 400)
         except TimegateError as e:
-            return error_response(e.status, e.message, start_response)
+            logging.info("End of timegate request due to TimegateError : %s" % e.message)
+            return error_response(e.status, start_response, e.message)
 
     # Unknown Service Request
     else:
         status = 400
         message = "Service request type '%s' does not match '%s' or '%s'" % (
                   req_type, TIMEMAP_URI_PART, TIMEGATE_URI_PART)
-        return error_response(status, message, start_response)
+        return error_response(status, start_response, message)
 
 
-def error_response(status, message, start_response):
+def error_response(status, start_response, message="Internal server error."):
     """
     Returns an error message to the user
     :param status: HTTP Status of the error

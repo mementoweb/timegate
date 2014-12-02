@@ -42,10 +42,12 @@ class Handler:
         try:
             req = requests.get(uri, timeout=timeout, **kwargs)
         except Exception as e:
-            raise HandlerError("Cannot request version server (%s): %s" % (uri, e.message), 502)
+            logging.error("Cannot request version server (%s): %s" % (uri, e.message))
+            raise HandlerError("Cannot request version server.", 502)
 
         if req is None:
-            raise HandlerError("Error requesting version server (%s)" % uri)
+            logging.error("Error requesting version server (%s): %s" % uri)
+            raise HandlerError("Error requesting version server.", 502)
         return req
 
 
@@ -68,10 +70,11 @@ def validate_response(handler_response):
                   isinstance(handler_response[0], tuple)):
         logging.error('Bad response from Handler:'
                         'Not a tuple nor tuple array')
-        raise HandlerError('handler_response must be either None, 2-Tuple or 2-Tuple array', 502)
+        raise HandlerError('Bad handler response.', 503)
     elif len(handler_response) > TM_MAX_SIZE:
         logging.warning('Bad response from Handler:'
-                        'TimeMap too big')
+                        'TimeMap (%d  greater than max %d)' %
+                        (len(handler_response), TM_MAX_SIZE))
         raise HandlerError('Handler response too big and unprocessable.', 502)
 
     # Output variables
@@ -87,11 +90,7 @@ def validate_response(handler_response):
                         'response must be either None, tuple(url, date) or'
                         ' [tuple(url, date)]. Where '
                         'url, date are with standards formats  %s')
-        raise HandlerError('Bad response from Handler:'
-                           'response must be either None, tuple(url, date) or'
-                           ' [tuple(url, date)]. Where '
-                           'url, date are with standards formats  %s'
-                           % e.message, 502)
+        raise HandlerError('Bad response from Handler:', 503)
 
     if not mementos:
         raise HandlerError('Handler response does not contain any memento for the requested resource.', 404)
