@@ -1,3 +1,4 @@
+import hashlib, os
 from core import tgutils
 __author__ = 'Yorick Chollet'
 
@@ -25,8 +26,8 @@ class Cache:
         # TODO add LRU somewhere environ 100MB
         self.tolerance = relativedelta(seconds=tolerance)
         self.path = path.rstrip('/')  # +'.db'
-        average_file_size = 1e+5
-        self.max_values = int(max_size / average_file_size)
+        self.max_file_size = 1e+5  # TODO from len(uri) * tmsize + x
+        self.max_values = int(max_size / self.max_file_size)
 
         self.backend = FileSystemCache(path,
                                        threshold=3,  # self.max_values
@@ -112,19 +113,35 @@ class Cache:
         key = uri_r
         try:
             self.backend.set(key, val)
+            self.check_size(uri_r)
         except Exception as e:
             logging.error("Error setting cache value: %s" % e.message)
             raise CacheError("Error setting cache value")
 
-#     def getsize(self, uri=''):
-#         if uri:
-#             fpath = '/'+md5(uri)
-#         else:
-#             raise NotImplementedError  # TODO here
-#         try:
-#             return os.path.getsize(self.path+fpath)
-#         except Exception as e:
-#             return 0
+    def check_size(self, uri, delete=True):
+        try:
+            fpath = self.path+'/' + md5(uri)
+            size = os.path.getsize(fpath)
+            if size > self.max_file_size and delete:
+                logging.warning("Cache value too big (%dB, max %dB) and deleted: TimeMap of %s" % (size, self.max_file_size, uri))
+                os.remove(fpath)
+                size = 0
+            return size
+        except Exception as e:
+            logging.error("Exception checking cache value size for %s Exception: %s" % (uri, e.message))
+            return 0
+
+
+# todo cache this
+def md5(uri):
+    """
+    returns the hexadecimal md5 of uri
+    """
+    m = hashlib.md5()
+    m.update(uri)
+    return m.hexdigest()
+
+
 #
 #     def cleanup(self, percents):
 #         before_size = self.getsize()
@@ -171,12 +188,3 @@ class Cache:
 #             usages[key] += size_diff
 #         self.backend.set('usages', usages)
 #
-#
-# # todo cache this
-# def md5(uri):
-#     """
-#     returns the hexadecimal md5 of uri
-#     """
-#     m = hashlib.md5()
-#     m.update(uri)
-#     return m.hexdigest()
