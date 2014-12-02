@@ -18,11 +18,11 @@ class WebHandler(Handler):
 
     def __init__(self):
         Handler.__init__(self)
-
-    def get_all_mementos(self, requri):
         cj = cookielib.LWPCookieJar()
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
         urllib2.install_opener(opener)
+
+    def get_all_mementos(self, requri):
 
         if requri == 'http://lanlsource.lanl.gov/hello':
             wcurl = 'http://webcitation.org/5jq247bmx'
@@ -35,7 +35,6 @@ class WebHandler(Handler):
         else:
             wcurl = 'http://webcitation.org/query.php?url=' + requri
 
-        # txheaders = {'User-Agent': 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)'}
         txheaders = {}
 
         try:
