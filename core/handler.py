@@ -77,14 +77,12 @@ def validate_response(handler_response):
                         (len(handler_response), TM_MAX_SIZE))
         raise HandlerError('Handler response too big and unprocessable.', 502)
 
-    # Output variables
-    mementos = []
-
+    valid_response = []
     try:
         for (url, date) in handler_response:
             valid_urlstr = tgutils.validate_uristr(url)
             valid_date = tgutils.validate_date(date, strict=False)
-            mementos.append((valid_urlstr, valid_date))
+            valid_response.append((valid_urlstr, valid_date))
     except Exception as e:
         logging.error('Bad response from Handler:'
                         'response must be either None, tuple(url, date) or'
@@ -92,11 +90,11 @@ def validate_response(handler_response):
                         'url, date are with standards formats  %s')
         raise HandlerError('Bad response from Handler:', 503)
 
-    if not mementos:
+    if not valid_response:
         raise HandlerError('Handler response does not contain any memento for the requested resource.', 404)
     else:
         # Sort by datetime
-        sorted_list = sorted(mementos, key=itemgetter(1))
+        sorted_list = sorted(valid_response, key=itemgetter(1))
 
 
     return sorted_list

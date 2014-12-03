@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+
+import subprocess
+
+subprocess.call(['uwsgi', '--ini', '/etc/timegate/timegate.ini'])

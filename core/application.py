@@ -6,7 +6,7 @@ import glob
 import logging
 import json
 
-from core.constants import DATE_FORMAT, CACHE_EXP, JSON_URI_PART, LINK_URI_PART,  TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_ACTIVATED, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI
+from core.constants import DATE_FORMAT, CACHE_EXP, JSON_URI_PART, LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_ACTIVATED, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI
 from errors.timegateerrors import TimegateError, URIRequestError, CacheError
 from core.cache import Cache
 from core.handler import validate_response, Handler
@@ -154,28 +154,49 @@ def error_response(status, start_response, message="Internal server error."):
     return [body]
 
 
-def memento_response(uri_m, uri_r, resource, start_response, batch_requests=True):
+def memento_response(memento, uri_r, resource, start_response, first=None, last=None, has_timemap=True):
     """
     Returns a 302 redirection to the best Memento
     for a resource and a datetime requested by the user.
-    :param uri_m: The URI string of the best memento.
+    :param memento: (The URI string, dt obj) of the best memento.
     :param start_response: WSGI callback function
     :return: The HTTP body as a list of one element
     """
 
-    #TODO encoding response as utf8 ?!?
-
     linkheaderval = '<%s>; rel="original"' % uri_r
-    if batch_requests:
+    if has_timemap:
         timemap_link = '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
         timemap_json = '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
-        linkheaderval += ', <%s>; rel="timemap";' \
+        linkheaderval += ', <%s>;rel="timemap";' \
                          ' type="application/link-format"' % timemap_link
-        linkheaderval += ', <%s>; rel="timemap";' \
+        linkheaderval += ', <%s>;rel="timemap";' \
                          ' type="application/json"' % timemap_json
-    linkheaderval += ', <%s>; rel="memento";' % uri_m
+    # No TimeGate link allowed here.
 
-    linkheaderval = linkheaderval
+    # Appendig first, last, memento to link header
+    (uri_m, dt_m) = memento
+    (uri_last, dt_last) = (uri_first, dt_first) = (None, None)
+    if last:
+        (uri_last, dt_last) = last
+    if first:
+        (uri_first, dt_first) = first
+
+    if first and last and uri_first == uri_last:
+        # There's only one memento (first = best = last)
+        assert(uri_last == uri_m)
+        linkheaderval += ', <%s>;rel="first last memento";datetime="%s"'\
+                         % (uri_m, date_str(dt_m))
+    else:
+        if first:
+            linkheaderval += ', <%s>;rel="first memento";datetime="%s"'\
+                             % (uri_first, date_str(dt_first))
+        if (uri_first != uri_m and uri_last != uri_m):
+            # The best memento is neither the first nor the last
+            linkheaderval += ', <%s>;rel="memento";datetime="%s"'\
+                             % (uri_m, date_str(dt_m))
+        if last:
+            linkheaderval += ', <%s>;rel="last memento";datetime="%s"'\
+                             % (uri_last, date_str(dt_last))
 
     status = 302
     headers = [
@@ -349,6 +370,7 @@ def timegate(req_path, start_response, req_datetime):
     # Dynamically loads the handler for that resource
     (handler, uri_r) = loadhandler(resource)
     # Runs the handler's API request for the Memento
+    first = last = None
     if hasattr(handler, 'get_all_mementos'):  # TODO put in const
         mementos = get_if_cached(uri_r, accept_datetime)
         if mementos is None:
@@ -358,6 +380,10 @@ def timegate(req_path, start_response, req_datetime):
             else:
                 logging.debug('Using multiple-request mode.')
                 mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
+                first = mementos[0]
+                last = mementos[-1]  # The last is assured to be a fresh value
+        else:
+            first = mementos[0]  # The cached first will never change, not the last
     elif hasattr(handler, 'get_memento'):
         mementos = validate_response(handler.get_memento(uri_r, accept_datetime))
     else:
@@ -366,7 +392,7 @@ def timegate(req_path, start_response, req_datetime):
 
     # If the handler returned several Mementos, take the closest
     memento = best(mementos, accept_datetime, RESOURCE_TYPE)
-    return memento_response(memento, uri_r, resource, start_response, hasattr(handler, 'get_all_mementos'))
+    return memento_response(memento, uri_r, resource, start_response, first, last, has_timemap=hasattr(handler, 'get_all_mementos'))
 
 
 def timemap(req_path, req_mime, start_response):

@@ -107,6 +107,8 @@ def nowstr():
 
 
 def best(timemap, accept_datetime, timemap_type, sorted=True):
+    assert(timemap)
+    assert(accept_datetime)
     if timemap_type == 'vcs':
         return closest_before(timemap, accept_datetime, sorted)
     else:
@@ -125,19 +127,22 @@ def closest(timemap, accept_datetime, sorted=True):
     # TODO optimize
 
     delta = timedelta.max
-    memento = None
+    memento_uri = None
+    memento_dt = None
+
 
     for (url, dt) in timemap:
         diff = abs(accept_datetime - dt)
         if diff < delta:
-            memento = url
+            memento_uri = url
+            memento_dt = dt
             delta = diff
         elif sorted:
             # The list is sorted and the delta didn't increase this time.
             # It will not increase anymore: Return the Memento (best one).
-            return memento
+            return (memento_uri, memento_dt)
 
-    return memento
+    return (memento_uri, memento_dt)
 
 
 def closest_before(timemap, accept_datetime, sorted=True):
@@ -152,29 +157,34 @@ def closest_before(timemap, accept_datetime, sorted=True):
     # TODO optimize
 
     delta = timedelta.max
-    prev = None
-    next = None
+    prev_uri = None
+    prev_dt = None
+    next_uri = None
+    next_dt = None
 
     for (url, dt) in timemap:
         diff = abs(accept_datetime - dt)
         if sorted:
             if dt > accept_datetime:
-                if prev is not None:
-                    return prev  # We passed 'accept-datetime'
+                if prev_uri is not None:
+                    return (prev_uri, prev_dt) # We passed 'accept-datetime'
                 else:
-                    return url  # The first of the list (even if it is after accept datetime)
-            prev = url
+                    return (url, dt)  # The first of the list (even if it is after accept datetime)
+            prev_uri = url
+            prev_dt = dt
         elif diff < delta:
             delta = diff
             if dt > accept_datetime:
-                next = url
+                next_uri = url
+                next_dt = dt
             else:
-                prev = url
+                prev_uri = url
+                prev_dt = dt
 
-    if prev is not None:
-        return prev
+    if prev_uri is not None:
+        return (prev_uri, prev_dt)
     else:
-        return next  # The first after accept datetime
+        return (next_uri, next_dt)  # The first after accept datetime
 
 
 def now():

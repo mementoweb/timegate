@@ -41,6 +41,8 @@ Handlers examples are provided for several APIs:
 - [wikipedia.org](https://www.wikipedia.org)
 - [awoiaf.westeros.org](http://awoiaf.westeros.org/index.php/Main_Page)
 
+Other scraping Handlers examples are provided for resources without any API.
+
 ## Running and stopping the server
 To start it, there are two possibilities:
 - Either execute`uwsgi --http :PORT --wsgi-file core/application.py --master [--pidfile /path/to/file.pid]`
@@ -60,5 +62,6 @@ Config file: `conf/config.ini`
 - `activated` When `true`, the cache stores TimeMap (from APIs that allows batch `get_all_mementos` requests. When false the cache files are not created.
 - `refresh_time` Time in seconds, for which it is assumed that a TimeMap didn't change. Any TimeGate request for a datetime past this period (or any TimeMap request past this period) will trigger a refresh of the cached value. Default 3600 seconds
 - `cache_directory` Relative path for data and lock files
+- `cache_max_size` The maximum size of the cache directory, in MB. The cache will start deleting values before this limit is reached.
 
 
