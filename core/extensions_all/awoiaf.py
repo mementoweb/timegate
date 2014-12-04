@@ -10,7 +10,6 @@ class AWOIAFHandler(MediaWikiHandler):
 
     def __init__(self):
         MediaWikiHandler.__init__(self)
-        # Mandatory fields
 
         # Local fields, the uri pattern of a resource
         self.rex = re.compile('(.+)(/index.php/)(.+)')

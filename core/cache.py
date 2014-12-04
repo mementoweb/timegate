@@ -26,7 +26,7 @@ class Cache:
         # TODO add LRU somewhere environ 100MB
         self.tolerance = relativedelta(seconds=tolerance)
         self.path = path.rstrip('/')  # +'.db'
-        self.max_file_size = 1e+5  # TODO from len(uri) * tmsize + x
+        self.max_file_size = 1e+6  # TODO from len(uri) * tmsize + x
         self.max_values = int(max_size / self.max_file_size)
 
         self.backend = FileSystemCache(path,
@@ -140,51 +140,3 @@ def md5(uri):
     m = hashlib.md5()
     m.update(uri)
     return m.hexdigest()
-
-
-#
-#     def cleanup(self, percents):
-#         before_size = self.getsize()
-#         to_clean = (percents/100.0) * before_size
-#         cleaned = 0
-#         keys_to_remove = []
-#         counts = self.backend.get('counts')
-#         usages = self.backend.get('usages')
-#         keys_sorted_by_count = [key for (key, cnt) in sorted(counts.items(), key=itemgetter(1))]
-#
-#         print keys_sorted_by_count
-#
-#         for key in keys_sorted_by_count:
-#             keys_to_remove.append(key)
-#             if key in usages:
-#                 size = usages[key]
-#                 cleaned += size
-#                 del usages[key]
-#             else:
-#                 cleaned = 0
-#             del counts[key]
-#             if cleaned > to_clean:
-#                 break
-#         self.backend.delete_many(keys_to_remove)
-#         self.backend.set('usages', usages)
-#         self.backend.set('counts', counts)
-#         after_size = self.getsize()
-#         logging.debug("cleanup(%d)=%d  Old size: %d. New Size: %d. Supposed to have cleaned %d, effective: %d" % (percents, to_clean, before_size, after_size, cleaned, before_size - after_size))
-#         logging.info("Cache cleaned up %d Bytes from %d URIs" % (cleaned, len(keys_to_remove)))
-#
-#     def increment_count(self, key):
-#         counts = self.backend.get('counts')
-#         if key not in counts:
-#             counts[key] = 1
-#         else:
-#             counts[key] += 1
-#         self.backend.set('counts', counts)
-#
-#     def increment_usage(self, key, size_diff):
-#         usages = self.backend.get('usages')
-#         if key not in usages:
-#             usages[key] = size_diff
-#         else:
-#             usages[key] += size_diff
-#         self.backend.set('usages', usages)
-#

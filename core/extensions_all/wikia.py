@@ -136,14 +136,6 @@ class WikiaHandler(Handler):
         return changes
 
     def get_xml(self, uri, html=False, headers=None):
-        """
-        Retrieves the resource using the url, parses it as XML or HTML
-        and returns the parsed dom object.
-        :param uri: [str] The uri to retrieve
-        :param headers: [dict(header_name: value)] optional http headers to send in the request
-        :param html: [bool] optional flag to parse the response as HTML
-        :return: [lxml_obj] parsed dom.
-        """
 
         page = self.request(uri, headers=headers)
         page_data = page.content
