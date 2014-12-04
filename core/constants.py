@@ -49,7 +49,7 @@ API_TIME_OUT = conf.getfloat('server', 'api_time_out')
 
 ## Handler configuration
 if conf.has_option('handler', 'base_uri'):
-    BASE_URI = conf.get('handler', 'base_uri')
+    BASE_URI = unicode.encode(conf.get('handler', 'base_uri'), 'utf-8')
 else:
     BASE_URI = ''
 if conf.getboolean('handler', 'is_vcs'):
@@ -63,7 +63,7 @@ CACHE_ACTIVATED = conf.getboolean('cache', 'activated')
 # Time window in which the cache value is considered young enough to be valid
 CACHE_TOLERANCE = conf.getint('cache', 'refresh_time')
 # Cache files paths
-CACHE_DIRECTORY = conf.get('cache', 'cache_directory').rstrip('/')
+CACHE_DIRECTORY = unicode.encode(conf.get('cache', 'cache_directory'), 'utf-8').rstrip('/')
 # Cache data file maximum size (in bytes)
 CACHE_MAX_SIZE = long(conf.getfloat('cache', 'cache_max_size') * 1e+6)
 # Cache files paths

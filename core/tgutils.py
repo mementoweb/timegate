@@ -61,7 +61,8 @@ def validate_uristr(uristr):
     try:
         return str(urlparse(uristr).geturl())
     except Exception as e:
-        raise Exception("Error: cannot parse uri string %s" % uristr)
+        raise Exception("Error: cannot parse uri string %s \n"
+                        "Message: %s" % (uristr, e.message))
 
 
 def validate_date(datestr, strict=False):
