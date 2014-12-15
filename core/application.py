@@ -6,13 +6,15 @@ import glob
 import logging
 import json
 
-from core.constants import DATE_FORMAT, CACHE_EXP, JSON_URI_PART, LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_ACTIVATED, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI
-from errors.timegateerrors import TimegateError, URIRequestError, CacheError
+from core.constants import (DATE_FORMAT, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE, JSON_URI_PART,LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI)
+from errors.timegateerrors import (TimegateError, URIRequestError, CacheError)
 from core.cache import Cache
 from core.handler import validate_response, Handler
-from core.tgutils import nowstr, validate_req_datetime, validate_req_uri, best, date_str, now
-from core.constants import CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE
+from core.timegate_utils import (nowstr, validate_req_datetime, parse_req_resource, best, date_str, now, get_canonical_uri)
 
+
+#TODO restructuredtext comments and docstring
+#TODO sphinx
 
 
 # Initialization code
@@ -22,12 +24,19 @@ from core.constants import CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE
 logging.basicConfig(filemode='w', format=LOG_FORMAT, level=logging.DEBUG)
 logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
-# Handler Loading
-found_handlers = 0
-api_handler = None
-try:
+
+def discover_handler(path):
+    """
+    Discovers and loads python class in *path* that is a subclass of core.extension.Handler
+    :param path: The directory to search in
+    :return: A handler object
+    :raises Exception: When no such class is found, or when more than one is found
+    """
+    # Handler Loading
+    found_handlers = 0
+    api_handler = None
     # Finds the paths of every python modules in the extension folder
-    files = [filename[:-3] for filename in glob.glob(EXTENSIONS_PATH+"*.py")]
+    files = [filename[:-3] for filename in glob.glob(path+"*.py")]
     for module_path in files:
         # Imports the python module
         module_identifier = module_path.replace('/', '.')
@@ -42,24 +51,36 @@ try:
                 found_handlers += 1
                 logging.info("Found handler %s" % handler_class)
                 if found_handlers > 1:
-                    raise Exception("More than one Handler class file in %s." % EXTENSIONS_PATH)
+                    raise Exception("More than one Handler class file in %s." % path)
     if found_handlers == 0:
-        raise Exception("No handler found in %s . \n    Make sure that the handler is a subclass of `Handler` of module core.handler." % EXTENSIONS_PATH)
+        raise Exception("No handler found in %s . \n    Make sure that the handler is a subclass of `Handler` of module core.handler." % path)
+    else:
+        handler_has_timegate = hasattr(api_handler, 'get_memento')
+        handler_has_timemap = hasattr(api_handler, 'get_all_mementos')
+        if handler_has_timegate or handler_has_timemap:
+            return api_handler, handler_has_timegate, handler_has_timemap
+        else:
+            raise NotImplementedError("NotImplementedError: Handler has neither `get_memento` nor `get_all_mementos` method.")
+
+# Handler loading
+try:
+    handler, HAS_TIMEGATE, HAS_TIMEMAP = discover_handler(EXTENSIONS_PATH)
 except Exception as e:
     logging.critical("Exception during handler loading: %s" % e.message)
     raise e
 
 # Cache loading
-cache_use = False
-if CACHE_ACTIVATED:
+cache_activated = False
+if CACHE_USE:
     try:
         cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_EXP, CACHE_MAX_SIZE)
-        cache_use = True
+        cache_activated = True
         logging.info("Cached started: cache file: %s, cache refresh: %d seconds, max_size: %d Bytes" % (CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE))
     except Exception as e:
         logging.error("Exception during cache loading. Cache deactivated. Check permissions")
 else:
     logging.info("Cache not used.")
+
 logging.info("Application loaded. Host: %s" % HOST)
 
 
@@ -69,36 +90,33 @@ def application(env, start_response):
     TimeMap requests are parsed here.
     :param env: Dictionary containing environment variables from the client request
     :param start_response: Callback function used to send HTTP status and headers to the server.
-    :return: The response body.
+    :return: The response body, in a list of one str element.
     """
-    # print "cache size at entry:%d" % cache.getsize()
 
-    # Extracting requested values
-    req = env.get('PATH_INFO', '/')
+    # Extracting HTTP request values
+    req_path = env.get('PATH_INFO', '/')
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
-    req_met = env.get('REQUEST_METHOD')
-    req_mime = env.get('HTTP_ACCEPT')
-    logging.info("Incoming request: %s %s, Accept-Datetime: %s, Accept: %s" % (
-                 req_met, req, req_datetime, req_mime))
-
+    req_method = env.get('REQUEST_METHOD')
+    logging.info("Incoming request: %s %s, Accept-Datetime: %s" % (
+                 req_method, req_path, req_datetime))
 
     # Escaping all other than 'GET' requests:
-    if req_met != 'GET' and req_met != 'HEAD':
+    if req_method != 'GET' and req_method != 'HEAD':
         status = 405
-        message = "Request method '%s' not allowed." % req_met
+        message = "Request method '%s' not allowed." % req_method
         return error_response(status, start_response, message)
 
     # Processing request service type and path
-    req = req.lstrip('/')
-    req_type = req.split('/', 1)[0]
+    req_path = req_path.lstrip('/')
+    req_type = req_path.split('/', 1)[0]
 
     # Serving TimeGate Request
     if req_type == TIMEGATE_URI_PART:
         try:
-            if len(req.split('/', 1)) > 1:
-                #removes leading 'TIMEGATESTR/'
-                req_path = req.split('/', 1)[1]
-                return timegate(req_path, start_response, req_datetime)
+            if len(req_path.split('/', 1)) > 1:
+                #removes leading 'TIMEGATE_URI_PART/'
+                req_uri = req_path.split('/', 1)[1]
+                return timegate(req_uri, start_response, req_datetime)
             else:
                 raise TimegateError("Incomplete timegate request. \n"
                                     "    Syntax: GET /timegate/:resource", 400)
@@ -109,12 +127,12 @@ def application(env, start_response):
     # Serving TimeMap Request
     elif req_type == TIMEMAP_URI_PART:
         try:
-            if len(req.split(('/'), 2)) > 2:
-                # gets the method (JSON or LINK)
-                req_mime = req.split('/', 2)[1]
-                #removes leading 'TIMEMAPSTR/MIME_TYPE/'
-                req_path = req.split('/', 2)[2]
-                return timemap(req_path, req_mime, start_response)
+            if len(req_path.split(('/'), 2)) > 2:
+                # gets the mime type for timemap (JSON or LINK)
+                req_mime = req_path.split('/', 2)[1]
+                #removes leading 'TIMEMAP_URI_PART/MIME_TYPE/'
+                req_uri = req_path.split('/', 2)[2]
+                return timemap(req_uri, req_mime, start_response)
             else:
                 raise TimegateError("Incomplete timemap request. \n"
                                     "    Syntax: GET /timemap/:type/:resource", 400)
@@ -133,10 +151,9 @@ def application(env, start_response):
 def error_response(status, start_response, message="Internal server error."):
     """
     Returns an error message to the user
-    :param status: HTTP Status of the error
-    :param message: The error message
+    :param status: HTTP Error Status
+    :param message: The error message string
     :param start_response: WSGI callback function
-    :param headers: Error HTTP headers
     :return: The HTTP body as a list of one element
     """
     body = "%s \n %s \n" % (status, message)
@@ -159,45 +176,42 @@ def memento_response(memento, uri_r, resource, start_response, first=None, last=
     Returns a 302 redirection to the best Memento
     for a resource and a datetime requested by the user.
     :param memento: (The URI string, dt obj) of the best memento.
+    :param uri_r: The original resource's complete URI
+    :param resource: The original resource's shortened URI
     :param start_response: WSGI callback function
+    :param first: (Optional) (URI string, dt obj) of the first memento
+    :param last: (Optional) (URI string, dt obj) of the last memento
+    :param has_timemap: Flag indicating that the handler accepts TimeMap requests too. Default True
     :return: The HTTP body as a list of one element
     """
 
-    linkheaderval = '<%s>; rel="original"' % uri_r
+    # Gather links containing original and if availible: TimeMap, first, last
+    # TimeGate link not allowed here
+    links = ['<%s>; rel="original"' % uri_r]
     if has_timemap:
         timemap_link = '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
         timemap_json = '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
-        linkheaderval += ', <%s>;rel="timemap";' \
-                         ' type="application/link-format"' % timemap_link
-        linkheaderval += ', <%s>;rel="timemap";' \
-                         ' type="application/json"' % timemap_json
-    # No TimeGate link allowed here.
-
-    # Appendig first, last, memento to link header
+        links.append('<%s>; rel="timemap"; type="application/link-format"' % timemap_link)
+        links.append('<%s>; rel="timemap"; type="application/json"' % timemap_json)
     (uri_m, dt_m) = memento
     (uri_last, dt_last) = (uri_first, dt_first) = (None, None)
     if last:
         (uri_last, dt_last) = last
     if first:
         (uri_first, dt_first) = first
-
     if first and last and uri_first == uri_last:
-        # There's only one memento (first = best = last)
-        assert(uri_last == uri_m)
-        linkheaderval += ', <%s>;rel="first last memento";datetime="%s"'\
-                         % (uri_m, date_str(dt_m))
+        assert(uri_last == uri_m) # There's only one memento (first = best = last)
+        links.append('<%s>; rel="first last memento"; datetime="%s"' % (uri_m, date_str(dt_m)))
     else:
         if first:
-            linkheaderval += ', <%s>;rel="first memento";datetime="%s"'\
-                             % (uri_first, date_str(dt_first))
+            links.append('<%s>;rel="first memento";datetime="%s"' % (uri_first, date_str(dt_first)))
         if (uri_first != uri_m and uri_last != uri_m):
             # The best memento is neither the first nor the last
-            linkheaderval += ', <%s>;rel="memento";datetime="%s"'\
-                             % (uri_m, date_str(dt_m))
+            links.append('<%s>; rel="memento"; datetime="%s"' % (uri_m, date_str(dt_m)))
         if last:
-            linkheaderval += ', <%s>;rel="last memento";datetime="%s"'\
-                             % (uri_last, date_str(dt_last))
+            links.append('<%s>; rel="last memento"; datetime="%s"' % (uri_last, date_str(dt_last)))
 
+    # Builds the response headers
     status = 302
     headers = [
         ('Date', nowstr()),  # TODO check timezone
@@ -206,7 +220,7 @@ def memento_response(memento, uri_r, resource, start_response, first=None, last=
         ('Content-Type', 'text/plain; charset=UTF-8'),
         ('Connection', 'close'),
         ('Location', uri_m),
-        ('Link', linkheaderval)
+        ('Link', ', '.join(links))
     ]
     # TODO put all normal headers in conf.constants
     body = []
@@ -218,8 +232,8 @@ def memento_response(memento, uri_r, resource, start_response, first=None, last=
 
 def timemap_link_response(mementos, uri_r, resource, start_response):
     """
-    Creates and sends a timemap response.
-    :param mementos: A sorted list of (uri_str, datetime_obj) tuples representing a timemap
+    Returns a 200 TimeMap response.
+    :param mementos: A sorted (ascending by date) list of (uri_str, datetime_obj) tuples representing a TimeMap
     :param uri_r: The URI-R of the original resource
     :param start_response: WSGI callback function
     :return: The HTTP body as a list of one element
@@ -275,87 +289,89 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
     """
     assert len(mementos) >= 1
 
-    # JSON response
-    ret = {}
+    # Prepares the JSON response by building a dict
+    response_dict = {}
 
-    ret['original_uri'] = uri_r
-    ret['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATE_URI_PART, resource)
+    response_dict['original_uri'] = uri_r
+    response_dict['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATE_URI_PART, resource)
 
-    # Browse through Mementos to generate TimeMap links JSON objects
-    mementos_links = [{'uri': urlstr, 'datetime': date_str(date)}
-                      for (urlstr, date) in mementos]
+    # Browse through Mementos to generate TimeMap links dict list
+    mementos_links = [{'uri': urlstr, 'datetime': date_str(date)} for (urlstr, date) in mementos]
 
-    # Sets up first and last
+    # Builds up first and last links dict
     first_datestr = mementos[0][1].strftime(DATE_FORMAT)
-    firstlink = {'uri': mementos[0][0],
-                 'datetime': first_datestr}
+    firstlink = {'uri': mementos[0][0], 'datetime': first_datestr}
     last_datestr = mementos[-1][1].strftime(DATE_FORMAT)
-    lastlink = {'uri': mementos[-1][0],
-                'datetime': last_datestr}
+    lastlink = {'uri': mementos[-1][0], 'datetime': last_datestr}
 
-    ret['mementos'] = {'last': lastlink,
+    response_dict['mementos'] = {'last': lastlink,
                        'first': firstlink,
                        'list': mementos_links}
 
-    ret['timemap_uri'] = {
+    # Builds self (TimeMap)links dict
+    response_dict['timemap_uri'] = {
         'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource),
         'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
     }
 
-    body = json.dumps(ret)
+    # Creates the JSON str from the dict
+    response_json = json.dumps(response_dict)
 
     # Builds HTTP Response and WSGI return
     status = 200
     headers = [
         ('Date', nowstr()),  # TODO check timezone
-        ('Content-Length', str(len(body))),
+        ('Content-Length', str(len(response_json))),
         ('Content-Type', 'application/json'),
         ('Connection', 'close')]
     start_response(HTTP_STATUS[status], headers)
     logging.info("Returning %d, JSON TimeMap of size %d for URI-R=%s" %
                  (status, len(mementos), uri_r))
-    return [body]
-
-
-def loadhandler(uri):
-    """
-    Loads the handler for the requested URI if it exists.
-    :param uri: The URI to match to a handler
-    :return: the handler object
-    """
-    if not uri.startswith(BASE_URI):
-        uri = BASE_URI + uri
-    return (api_handler, uri)
+    return [response_json]
 
 
 def get_and_cache(uri_r, getter, *args, **kwargs):
-    if cache_use:
+    """
+    Uses the getter to retrieve a TimeMap for an original resource.
+
+    The value is cached if the cache is activated
+    :param uri_r: The URI to retrieve and cache the TimeMap of
+    :param getter: Handler function to call
+    :param args: Arguments to pass to *getter*
+    :param kwargs: Keywords arguments to pass to *getter*
+    :return: The retrieved value
+    """
+    if cache_activated:
         return cache.refresh(uri_r, getter, *args, **kwargs)
     else:
         return validate_response(getter(*args, **kwargs))
 
 
-def get_if_cached(uri_r, accept_datetime=None):
-    if cache_use:
-        try:
-            if accept_datetime:
-                return cache.get_until(uri_r, accept_datetime)
-            else:
-                return cache.get_all(uri_r)
-        except CacheError as ce:
-            # cache_use = False TODO fix
-            pass
+def get_cached_timemap(uri_r, before=None):
+    """
+    Returns a cached TimeMap for an original resource that spans at least up to a certain date.
+
+    :param uri_r: The original resource to look for
+    :param before: (Optional) datetime object until which a TimeMap suffice.
+    If not given, the function will look for a complete TimeMap (complete with respect to the cache tolerance)
+    :return: The cached TimeMap if it exists and is valid, None otherwise.
+    """
+    if cache_activated:
+        if before:
+            return cache.get_until(uri_r, before)
+        else:
+            return cache.get_all(uri_r)
     return None
 
 
-def timegate(req_path, start_response, req_datetime):
+def timegate(req_uri, start_response, req_datetime):
     """
     Handles timegate high-level logic. Fetch the Memento for the requested URI
     at the requested date time. Returns a HTTP 302 response if it exists.
     If the resource handler allows batch requests, then the result may be
     cached.
     :param req_datetime: The Accept-Datetime string
-    :param req_path: The requested original resource URI
+    :param req_uri: The requested original resource URI
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
@@ -366,15 +382,15 @@ def timegate(req_path, start_response, req_datetime):
     else:
         accept_datetime = validate_req_datetime(req_datetime, STRICT_TIME)
 
-    resource = validate_req_uri(req_path)
-    # Dynamically loads the handler for that resource
-    (handler, uri_r) = loadhandler(resource)
+    resource = parse_req_resource(req_uri)
+    # Rewrites the original URI from the requested resource
+    uri_r = get_canonical_uri(resource)
     # Runs the handler's API request for the Memento
     first = last = None
-    if hasattr(handler, 'get_all_mementos'):  # TODO put in const
-        mementos = get_if_cached(uri_r, accept_datetime)
+    if HAS_TIMEMAP:
+        mementos = get_cached_timemap(uri_r, accept_datetime)
         if mementos is None:
-            if hasattr(handler, 'get_memento'):
+            if HAS_TIMEGATE:
                 logging.debug('Using single-request mode.')
                 mementos = validate_response(handler.get_memento(uri_r, accept_datetime))
             else:
@@ -384,24 +400,23 @@ def timegate(req_path, start_response, req_datetime):
                 last = mementos[-1]  # The last is assured to be a fresh value
         else:
             first = mementos[0]  # The cached first will never change, not the last
-    elif hasattr(handler, 'get_memento'):
-        mementos = validate_response(handler.get_memento(uri_r, accept_datetime))
     else:
-        logging.error("NotImplementedError: Handler has neither get_memento nor get_all_mementos function.")
-        raise TimegateError("NotImplementedError: Handler has neither get_memento nor get_all_mementos function.", 502)  # TODO put in const
+        mementos = validate_response(handler.get_memento(uri_r, accept_datetime))
 
     # If the handler returned several Mementos, take the closest
     memento = best(mementos, accept_datetime, RESOURCE_TYPE)
     return memento_response(memento, uri_r, resource, start_response, first, last, has_timemap=hasattr(handler, 'get_all_mementos'))
 
+# TODO change each % to str.format()
 
-def timemap(req_path, req_mime, start_response):
+
+def timemap(req_uri, req_mime, start_response):
     """
     Handles TimeMap high-level logic. Fetches all Mementos for an Original
     Resource and builds the TimeMap response. Returns a HTTP 200 response if it
     exists with the timemap in the message body.
     :param req_datetime: The Accept-Datetime string, if provided
-    :param req_path: The requested original resource URI
+    :param req_uri: The requested original resource URI
     :param start_response: WSGI callback function
     :return: The body of the HTTP response
     """
@@ -409,16 +424,15 @@ def timemap(req_path, req_mime, start_response):
         raise URIRequestError('Mime type (%s) empty or unknown. Request must be GET timemap/%s/... or GET timemap/%s/... '
                               % (req_mime, JSON_URI_PART, LINK_URI_PART), 400)
 
-    resource = validate_req_uri(req_path)
-    # Dynamically loads the handler for that resource.
-    (handler, uri_r) = loadhandler(resource)
-
-    if hasattr(handler, 'get_all_mementos'):
-        mementos = get_if_cached(uri_r)
+    resource = parse_req_resource(req_uri)
+    # Rewrites the original URI from the requested resource
+    uri_r = get_canonical_uri(resource)
+    if HAS_TIMEMAP:
+        mementos = get_cached_timemap(uri_r)
         if mementos is None:
             mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
     else:
-        raise TimegateError("Handler cannot serve timemaps.", 400)  # TODO put in const
+        raise TimegateError("Cannot serve TimeMaps.", 400)  # TODO put in const
 
     # Generates the TimeMap response body and Headers
     if req_mime.startswith(JSON_URI_PART):

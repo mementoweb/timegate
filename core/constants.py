@@ -1,7 +1,7 @@
 __author__ = 'Yorick Chollet'
 
 from configparser import ConfigParser
-
+# TODO add all in one dictionnary
 ### Code constants
 HTTP_STATUS = {
     200: "200 OK",
@@ -32,9 +32,7 @@ EXTENSIONS_PATH = 'core/extension/'
 LOG_FORMAT = '%(asctime)s | %(levelname)s| %(message)s'
 LOG_FILE = 'log.txt'
 
-TM_MAX_SIZE = 25000
-
-#TODO add decode('iso-8859-1')
+TM_MAX_SIZE = 100000
 
 
 ### Configuration constants
@@ -58,8 +56,8 @@ else:
     RESOURCE_TYPE = 'snapshot'
 
 ## Cache
-# When False, all cache requests will be cache MISSes
-CACHE_ACTIVATED = conf.getboolean('cache', 'activated')
+# When False, all cache requests will be cache MISS
+CACHE_USE = conf.getboolean('cache', 'activated')
 # Time window in which the cache value is considered young enough to be valid
 CACHE_TOLERANCE = conf.getint('cache', 'refresh_time')
 # Cache files paths
@@ -67,8 +65,6 @@ CACHE_DIRECTORY = unicode.encode(conf.get('cache', 'cache_directory'), 'utf-8').
 # Cache data file maximum size (in bytes)
 CACHE_MAX_SIZE = long(conf.getfloat('cache', 'cache_max_size') * 1e+6)
 # Cache files paths
-CACHE_FILE = CACHE_DIRECTORY + '/cache_data'
-CACHE_RWLOCK = CACHE_DIRECTORY + '/cache_rwlock'
-CACHE_DLOCK = CACHE_DIRECTORY + '/cache_dlock'
+CACHE_FILE = CACHE_DIRECTORY #+ '/cache_data'
 # Cache expiration (space bound) in seconds
-CACHE_EXP = 259200 # Three days
+CACHE_EXP = 259200  # Three days

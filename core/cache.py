@@ -1,5 +1,5 @@
 import hashlib, os
-from core import tgutils
+from core import timegate_utils
 __author__ = 'Yorick Chollet'
 
 from dateutil.relativedelta import relativedelta
@@ -84,7 +84,7 @@ class Cache:
         """
         # No way to know if table is new other than retrieve one.
         # Hope to retrieve in the tolerance delta.
-        return self.get_until(uri_r, tgutils.now())
+        return self.get_until(uri_r, timegate_utils.now())
 
     def refresh(self, uri_r, getter, *args, **kwargs):
         try:
@@ -108,7 +108,7 @@ class Cache:
         :return: the backend setter method return value.
         """
         logging.info("Updating cache for %s" % uri_r)
-        timestamp = tgutils.now()
+        timestamp = timegate_utils.now()
         val = (timestamp, timemap)
         key = uri_r
         try:

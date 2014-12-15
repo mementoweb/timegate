@@ -4,7 +4,7 @@ import logging
 from lxml import etree
 import StringIO
 from errors.timegateerrors import HandlerError
-from core.tgutils import now
+from core.timegate_utils import now
 
 __author__ = "Robert Sanderson, Yorick Chollet"
 

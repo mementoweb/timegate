@@ -11,7 +11,7 @@ import StringIO
 from errors.timegateerrors import HandlerError
 from core.handler import Handler
 
-from core.tgutils import date_str
+from core.timegate_utils import date_str
 
 __author__ = "Robert Sanderson, Harihar Shankar, Yorick Chollet"
 

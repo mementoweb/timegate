@@ -5,7 +5,7 @@ __author__ = 'Yorick Chollet'
 from core.handler import Handler
 from errors.timegateerrors import HandlerError
 
-from core.tgutils import date_str
+from core.timegate_utils import date_str
 
 
 class MediaWikiHandler(Handler):

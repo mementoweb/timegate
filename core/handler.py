@@ -1,4 +1,4 @@
-from core import tgutils
+from core import timegate_utils
 
 __author__ = 'Yorick Chollet'
 
@@ -18,24 +18,24 @@ class Handler:
 
     def __init__(self):
         pass
-        # assert not (hasattr(self, 'get_memento') or hasattr(self, 'get_all_mementos'))
 
     def request(self, resource, timeout=API_TIME_OUT, **kwargs):
         """
-        Handler helper function. Requests the resource at host.
-        :param host: The hostname of the API
-        :param resource: The original resource path
+        Handler helper function. Requests the resource over HTTP.
+        Logs the request and handles exceptions
+        :param resource: The resource to get
+        :param timeout: The HTTP Timeout for a single request
+        :param kwargs: The keywords arguments to pass to the request method (`params`).
         :return: A requests response object
-        Raises HandlerError if the requests fails to access the API
+        :raises HandlerError: if the requests fails to access the API
         """
         uri = resource
 
-        # Request logging for debug purposes.
+        # Request logging with params
         try:
             logging.info("Sending API request for %s?%s" % (
-                uri, '&'.join(map(lambda(k, v): '%s=%s' % (k, v),
-                                                kwargs['params'].items()))))
-        except Exception as e:
+                uri, '&'.join(map(lambda(k, v): '%s=%s' % (k, v), kwargs['params'].items()))))
+        except Exception:
             # Key errors on 'params'
             logging.info("Sending API request for %s" % uri)
 
@@ -54,11 +54,9 @@ class Handler:
 def validate_response(handler_response):
     """
     Controls and parses the response from the Handler.
-    as a tuple with the form (URI, None) in the list.
-    :param handler_response: Either None, a tuple (URI, date) or a list of (URI, date)
+    :param handler_response: Either None, a tuple (URI, date) or a list  [(URI, date),...]
     where one tuple can have 'None' date to indicate that this URI is the original resource's.
-    :return: A sorted (URI_str, date_obj)-list of
-    all Mementos. In the response, and all URIs/dates are valid.
+    :return: A sorted [(URI_str, date_obj),...] list of all Mementos. In the response, and all URIs/dates are valid.
     """
 
     # Input check
@@ -68,20 +66,18 @@ def validate_response(handler_response):
         handler_response = [handler_response]
     elif not (isinstance(handler_response, list) and
                   isinstance(handler_response[0], tuple)):
-        logging.error('Bad response from Handler:'
-                        'Not a tuple nor tuple array')
+        logging.error('Bad response from Handler: Not a tuple nor tuple array')
         raise HandlerError('Bad handler response.', 503)
     elif len(handler_response) > TM_MAX_SIZE:
-        logging.warning('Bad response from Handler:'
-                        'TimeMap (%d  greater than max %d)' %
+        logging.warning('Bad response from Handler: TimeMap (%d  greater than max %d)' %
                         (len(handler_response), TM_MAX_SIZE))
         raise HandlerError('Handler response too big and unprocessable.', 502)
 
     valid_response = []
     try:
         for (url, date) in handler_response:
-            valid_urlstr = tgutils.validate_uristr(url)
-            valid_date = tgutils.validate_date(date, strict=False)
+            valid_urlstr = timegate_utils.validate_uristr(url)
+            valid_date = timegate_utils.validate_date(date, strict=False)
             valid_response.append((valid_urlstr, valid_date))
     except Exception as e:
         logging.error('Bad response from Handler:'

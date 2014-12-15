@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_datestr
 from dateutil.tz import tzutc
 
-from core.constants import DATE_FORMAT
+from core.constants import DATE_FORMAT, BASE_URI
 from errors.timegateerrors import URIRequestError, DateTimeError
 
 
@@ -33,7 +33,21 @@ def validate_req_datetime(datestr, strict=True):
                             "Message: %s" % (datestr, e.message))
 
 
-def validate_req_uri(pathstr):
+def get_canonical_uri(resource):
+    """
+    Returns the canonical URI from the resource.
+    Appends the handler's base_uri to the resource if it not present.
+
+    The purpose of this function is to allow more complex rewrite rules in the future.
+    :param resource: The resource to make canonical.
+    :return: The original URI in its canonical form.
+    """
+    if not resource.startswith(BASE_URI):
+        resource = BASE_URI + resource
+    return resource
+
+
+def parse_req_resource(pathstr):
     """
     Parses the requested URI string.
     Raises URIRequestError if the parse fails to recognize a valid URI

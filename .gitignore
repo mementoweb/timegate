@@ -7,3 +7,5 @@ log.txt
 cache_*
 githubdir
 conf/serv_inis/*
+testuris
+cache/*
