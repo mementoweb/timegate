@@ -1,4 +1,4 @@
-import hashlib, os
+import os
 from core import timegate_utils
 __author__ = 'Yorick Chollet'
 
@@ -8,7 +8,7 @@ import logging
 from errors.timegateerrors import HandlerError, CacheError
 from handler import validate_response
 
-from werkzeug.contrib.cache import FileSystemCache
+from werkzeug.contrib.cache import FileSystemCache, md5
 
 
 class Cache:
@@ -16,10 +16,10 @@ class Cache:
     def __init__(self, path, tolerance, expiration, max_size):
         """
         Constructor method
-        :param tolerance: The tolerance, in seconds to which a TimeMap is considered young enough to be used as is.
         :param path: The path of the cache database file.
-        :param expiration: How long, in seconds, the cache entries are stored
-        every get will be a CACHE MISS.
+        :param tolerance: The tolerance, in seconds to which a TimeMap is considered young enough to be used as is.
+        :param expiration: How long, in seconds, the cache entries are stored every get will be a CACHE MISS.
+        :param max_size: The maximum size, in Bytes for the cache data folder
         :return:
         """
 
@@ -35,18 +35,15 @@ class Cache:
         logging.debug("Cache created. max_files = %d. Expiration = %d " % (self.max_values, expiration))
 
     def get_until(self, uri_r, date):
-        """ # TODO recomment
-        Returns the timemap (memento,datetime)-list for the requested memento.
-        The timemap is garanteed to span at least until the 'date' parameter,
+        """
+        Returns the TimeMap (memento,datetime)-list for the requested Memento.
+        The TimeMap is guaranteed to span at least until the 'date' parameter,
         within the tolerance.
         :param uri_r: The URI-R of the resource as a string
-        :param date: The target date. It is the accept-datetime for timegate
-        requests, and the current date. The cache will return all mementos
+        :param date: The target date. It is the accept-datetime for TimeGate
+        requests, and the current date. The cache will return all Mementos
         prior to this date (within cache.tolerance parameter)
-        :param getter: The function to use in case of a cache miss
-        :param args: getter function arguments
-        :param kwargs: getter function named arguments
-        :return: (memento_uri_string, datetime_obj)-list
+        :return: [(memento_uri_string, datetime_obj),...] list if it is in cache and if it is within the cache tolerance for *date*, None otherwise
         """
         # Query the backend for stored cache values to that memento
         key = uri_r
@@ -58,10 +55,9 @@ class Cache:
 
         if val:
             # There is a value in the cache
-            timetamp = val[0]
-            timemap = val[1]
+            timestamp, timemap = val
             logging.info("Cached value exists for %s" % uri_r)
-            if date > timetamp + self.tolerance:
+            if date > timestamp + self.tolerance:
                 logging.info("Cache MISS: value outdated for %s" % uri_r)
                 timemap = None
             else:
@@ -75,18 +71,21 @@ class Cache:
 
     def get_all(self, uri_r):
         """
-        Request the whole timemap for that uri
+        Request the whole TimeMap for that uri
         :param uri_r: the URI-R of the resource
-        :param getter: The function to use in case of a cache miss
-        :param args: getter function arguments
-        :param kwargs: getter function named arguments
-        :return: (memento_uri_string, datetime_obj)-list
+        :return: [(memento_uri_string, datetime_obj),...] list if it is in cache and if it is within the cache tolerance, None otherwise
         """
-        # No way to know if table is new other than retrieve one.
-        # Hope to retrieve in the tolerance delta.
         return self.get_until(uri_r, timegate_utils.now())
 
     def refresh(self, uri_r, getter, *args, **kwargs):
+        """
+        Refreshes the cached TimeMap for a specific resource and returns it
+        :param uri_r: The original resource URI to refresh the TimeMap
+        :param getter: The function to call to get a fresh TimeMap
+        :param args: *getter* arguments
+        :param kwargs: *getter* keywords arguments
+        :return: The fresh TimeMap
+        """
         try:
             # Requests the data
             timemap = validate_response(getter(*args, **kwargs))
@@ -96,15 +95,15 @@ class Cache:
             logging.error("Error getting and parsing handler response: %s" % e.message)
             raise HandlerError("Error getting and parsing handler response")
         # Creates or refreshes the new timemap for that URI-R
-        self.set(uri_r, timemap)
+        self._set(uri_r, timemap)
         return timemap
 
-    def set(self, uri_r, timemap):
+    def _set(self, uri_r, timemap):
         """
-        Sets / refreshes the cached timemap for that URI-R. And appends it with
-        a timestamp.
+        Sets / refreshes the cached TimeMap for that URI-R. And appends it with
+        a timestamp of when it is stored.
         :param uri_r: The URI-R of the original resource
-        :param timemap:
+        :param timemap: The value to cache
         :return: the backend setter method return value.
         """
         logging.info("Updating cache for %s" % uri_r)
@@ -113,30 +112,31 @@ class Cache:
         key = uri_r
         try:
             self.backend.set(key, val)
-            self.check_size(uri_r)
+            self._check_size(uri_r)
         except Exception as e:
             logging.error("Error setting cache value: %s" % e.message)
             raise CacheError("Error setting cache value")
 
-    def check_size(self, uri, delete=True):
+    def _check_size(self, uri, delete=True):
+        """
+        Checks the size that a specific TimeMap value is using on disk. Deletes if it is more than the maximum size
+        :param uri: The TimeMap original resource
+        :param delete: (Optional) When true, the value is deleted. Else only a warning is raised.
+        :return: the size of the value on disk (0 if it was deleted)
+        """
         try:
-            fpath = self.path+'/' + md5(uri)
+            fname = md5(uri).hexdigest()  # werkzeug key
+            fpath = self.path+'/' + fname
             size = os.path.getsize(fpath)
             if size > self.max_file_size and delete:
-                logging.warning("Cache value too big (%dB, max %dB) and deleted: TimeMap of %s" % (size, self.max_file_size, uri))
-                os.remove(fpath)
-                size = 0
+                message = "Cache value too big (%dB, max %dB) for the TimeMap of %s"
+                if delete:
+                    message += ". Deleting cached value."
+                    os.remove(fpath)
+                    size = 0
+                logging.warning(message % (size, self.max_file_size, uri))
             return size
         except Exception as e:
-            logging.error("Exception checking cache value size for %s Exception: %s" % (uri, e.message))
+            logging.error("Exception checking cache value size for TimeMap of %s Exception: %s" % (uri, e.message))
             return 0
 
-
-# todo cache this
-def md5(uri):
-    """
-    returns the hexadecimal md5 of uri
-    """
-    m = hashlib.md5()
-    m.update(uri)
-    return m.hexdigest()
