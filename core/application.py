@@ -10,7 +10,7 @@ from core.constants import (DATE_FORMAT, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE,
 from errors.timegateerrors import (TimegateError, URIRequestError, CacheError)
 from core.cache import Cache
 from core.handler import validate_response, Handler
-from core.timegate_utils import (nowstr, validate_req_datetime, parse_req_resource, best, date_str, now, get_canonical_uri)
+from core.timegate_utils import (nowstr, validate_req_datetime, parse_req_resource, best, date_str, now, get_complete_uri)
 
 
 #TODO restructuredtext comments and docstring
@@ -384,7 +384,7 @@ def timegate(req_uri, start_response, req_datetime):
 
     resource = parse_req_resource(req_uri)
     # Rewrites the original URI from the requested resource
-    uri_r = get_canonical_uri(resource)
+    uri_r = get_complete_uri(resource)
     # Runs the handler's API request for the Memento
     first = last = None
     if HAS_TIMEMAP:
@@ -426,7 +426,7 @@ def timemap(req_uri, req_mime, start_response):
 
     resource = parse_req_resource(req_uri)
     # Rewrites the original URI from the requested resource
-    uri_r = get_canonical_uri(resource)
+    uri_r = get_complete_uri(resource)
     if HAS_TIMEMAP:
         mementos = get_cached_timemap(uri_r)
         if mementos is None:

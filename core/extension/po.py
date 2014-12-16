@@ -5,6 +5,7 @@ from lxml import etree
 import StringIO
 from errors.timegateerrors import HandlerError
 from core.handler import Handler
+from core.timegate_utils import get_uri_representations
 
 __author__ = "aalsum, Yorick Chollet"
 
@@ -13,17 +14,22 @@ class PoHandler(Handler):
 
     def __init__(self):
         Handler.__init__(self)
-        self.baseuri = "http://arquivo.pt/wayback/wayback/xmlquery?type=urlquery&url="
+        self.baseuri = "http://arquivo.pt/wayback/wayback/xmlquery"
 
-    def get_all_mementos(self, req_url):
+    def get_all_mementos(self, req_uri):
+        all_mementos = []
+        [all_mementos.extend(self.query(uri)) for uri in get_uri_representations(req_uri)]
+        return all_mementos
+
+    def query(self, resource):
         # implement the changes list for this particular proxy
-        param = {'url': req_url,
+        param = {'url': resource,
                  'type': 'urlquery'}
 
         changes = []
 
-        uri = self.baseuri + req_url
-        dom = self.get_xml(uri)
+        uri = self.baseuri + resource
+        dom = self.get_xml(uri, params=param)
         if dom:
             rlist = dom.xpath('/wayback/results/result')
             for a in rlist:
@@ -36,7 +42,7 @@ class PoHandler(Handler):
 
         return changes
 
-    def get_xml(self, uri, html=False):
+    def get_xml(self, uri, params=None, html=False):
         """
         Retrieves the resource using the url, parses it as XML or HTML
         and returns the parsed dom object.
@@ -46,7 +52,7 @@ class PoHandler(Handler):
         :return: [lxml_obj] parsed dom.
         """
 
-        page = self.request(uri)
+        page = self.request(uri, params=params)
         page_data = page.content
         try:
             if not html:
@@ -54,7 +60,12 @@ class PoHandler(Handler):
             else:
                 parser = etree.HTMLParser(recover=True)
             return etree.parse(StringIO.StringIO(page_data), parser)
-        except Exception as e:
+        except Exception:
             logging.error("Cannot parse XML/HTML from %s" % uri)
             raise HandlerError("Couldn't parse data from %s" % uri)
+
+
+
+
+
 

@@ -1,6 +1,7 @@
 __author__ = 'Yorick Chollet'
 
 import logging
+import re
 from urlparse import urlparse
 
 from datetime import datetime, timedelta
@@ -33,9 +34,9 @@ def validate_req_datetime(datestr, strict=True):
                             "Message: %s" % (datestr, e.message))
 
 
-def get_canonical_uri(resource):
+def get_complete_uri(resource):
     """
-    Returns the canonical URI from the resource.
+    Returns the complete URI from the resource.
     Appends the handler's base_uri to the resource if it not present.
 
     The purpose of this function is to allow more complex rewrite rules in the future.
@@ -58,6 +59,7 @@ def parse_req_resource(pathstr):
     try:
         # Replacing white spaces
         path = pathstr.replace(' ', '%20')
+        path = path.replace('&', '%26')
         uri = validate_uristr(path)
         logging.debug("Requested URI parsed to: "+uri)
         return uri
@@ -209,3 +211,36 @@ def now():
     """
     return datetime.utcnow().replace(tzinfo=tzutc())
 
+
+def get_uri_representations(uri):
+    """
+    Needed because some API do not process the url canonization properly,
+    and treat http://example.com and http://www.example.com differently
+
+    This function returns the list of canonical representation of a URI.
+    It also appends the `http://` protocol if missing.
+    For instance, *uri*='example.com' will return ['http://example.com', 'http://www.example.com']
+    and *uri*='domain.example.com' will return ['http://domain.example.com']
+    :param uri: the uri string to make canonical
+    :return: the canonical representations of this URI
+    """
+    uri_list = []
+
+    m = re.match(r'(https?://)?(www.)?(.+)', uri)
+    http, www, netloc = m.groups()
+    has_subdomain = len(netloc.split('/')[0].split('.')) > 2  # domain.example.com/path/ not example.com/path/
+
+    if not http:
+        http = 'http://'
+
+    if www:
+        uri_list.append(http+www+netloc)
+        if not has_subdomain:
+            uri_list.append(http+netloc)
+    else:
+        www = 'www.'
+        uri_list.append(http+netloc)
+        if not has_subdomain:
+            uri_list.append(http+www+netloc)
+
+    return uri_list
