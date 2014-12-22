@@ -2,6 +2,7 @@ import re
 import StringIO
 from lxml import etree
 from core.handler import Handler
+import logging
 
 __author__ = "Robert Sanderson, Yorick Chollet"
 
@@ -48,14 +49,15 @@ class LocHandler(Handler):
 
             try:
                 req = self.request(iauri)
-            except:
+            except Exception as e:
                 continue
             data = req.content
 
             try:
                 parser = etree.HTMLParser(recover=True)
                 dom = etree.parse(StringIO.StringIO(data), parser)
-            except:
+            except Exception as e:
+                logging.error("Exception parsing data in loc handler: %s" % e.message)
                 continue
 
             alist = dom.xpath('//a')

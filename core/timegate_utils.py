@@ -227,6 +227,8 @@ def get_uri_representations(uri):
     uri_list = []
 
     m = re.match(r'(https?://)?(www.)?(.+)', uri)
+    if not m:
+        return []
     http, www, netloc = m.groups()
     has_subdomain = len(netloc.split('/')[0].split('.')) > 2  # domain.example.com/path/ not example.com/path/
 

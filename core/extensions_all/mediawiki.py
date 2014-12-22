@@ -58,7 +58,7 @@ class MediaWikiHandler(Handler):
         except HandlerError as he:
             raise he
         except Exception as e:
-            logging.error("ERROR querying and parsing page for title/api %s. handler will return empty response" % e.message)
+            logging.error("MediaWikiHandler: querying and parsing page for title/api %s. handler will return empty response" % e.message)
             return None
 
         base_uri = api_base_uri.replace("api.php", "index.php")
@@ -85,8 +85,6 @@ class MediaWikiHandler(Handler):
             # Clone original request
             newparams = params.copy()
             req = self.request(api_base_uri, params=newparams)
-            if req.status_code == 404:
-                raise HandlerError("Cannot find resource on version server.", 404)
             try:
                 result = req.json()
             except Exception as e:
@@ -141,8 +139,8 @@ class MediaWikiHandler(Handler):
         """
 
         page = self.request(uri)
-        page_data = page.content
         try:
+            page_data = page.content
             if not html:
                 parser = etree.XMLParser(recover=True)
             else:
@@ -150,5 +148,5 @@ class MediaWikiHandler(Handler):
             return etree.parse(StringIO.StringIO(page_data), parser)
         except Exception as e:
             logging.error("Cannot parse XML/HTML from %s" % uri)
-            raise HandlerError("Couldn't parse data from %s" % uri)
+            raise HandlerError("Couldn't parse data from %s" % uri, 404)
 

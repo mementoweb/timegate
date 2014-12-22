@@ -47,7 +47,11 @@ class Handler:
 
         if req is None:
             logging.error("Error requesting server (%s): %s" % uri)
-            raise HandlerError("Error requesting version server.", 502)
+            raise HandlerError("Error requesting version server.", 404)
+
+        if not req:
+            logging.info("Response other than 2XX: %s" % req)
+            raise HandlerError("API response not 2XX", 404)
         return req
 
 

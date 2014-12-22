@@ -53,8 +53,8 @@ class PoHandler(Handler):
         """
 
         page = self.request(uri, params=params)
-        page_data = page.content
         try:
+            page_data = page.content
             if not html:
                 parser = etree.XMLParser(recover=True)
             else:
@@ -62,7 +62,7 @@ class PoHandler(Handler):
             return etree.parse(StringIO.StringIO(page_data), parser)
         except Exception:
             logging.error("Cannot parse XML/HTML from %s" % uri)
-            raise HandlerError("Couldn't parse data from %s" % uri)
+            raise HandlerError("Couldn't parse data from %s" % uri, 404)
 
 
 

@@ -138,8 +138,8 @@ class WikiaHandler(Handler):
     def get_xml(self, uri, html=False, headers=None):
 
         page = self.request(uri, headers=headers)
-        page_data = page.content
         try:
+            page_data = page.content
             if not html:
                 parser = etree.XMLParser(recover=True)
             else:
@@ -147,4 +147,4 @@ class WikiaHandler(Handler):
             return etree.parse(StringIO.StringIO(page_data), parser)
         except Exception as e:
             logging.error("Cannot parse XML/HTML from %s" % uri)
-            raise HandlerError("Couldn't parse data from %s" % uri)
+            raise HandlerError("Couldn't parse data from %s" % uri, 404)

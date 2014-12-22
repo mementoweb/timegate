@@ -61,8 +61,8 @@ class NaraHandler(Handler):
         """
 
         page = self.request(uri)
-        page_data = page.content
         try:
+            page_data = page.content
             if not html:
                 parser = etree.XMLParser(recover=True)
             else:

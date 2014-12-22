@@ -3,7 +3,7 @@ Memento proxy for Estonia Web Archive
 TODO: rewrite regex html parsing(?) with lxml
 """
 import re
-
+import logging
 
 from core.handler import Handler
 from errors.timegateerrors import HandlerError
@@ -28,7 +28,8 @@ class EsHandler(Handler):
             resp = self.request(uri)
             data = resp.content
         except Exception as e:
-            raise HandlerError("Cannot request URI")
+            logging.error("Cannot request URI: %s" % e.message)
+            raise HandlerError("Cannot request URI", 404)
 
         changes = []
         uris = re.findall(self.uriRegex, data)
