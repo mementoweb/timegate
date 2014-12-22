@@ -97,8 +97,9 @@ def application(env, start_response):
     req_path = env.get('PATH_INFO', '/')
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
     req_method = env.get('REQUEST_METHOD')
-    logging.info("Incoming request: %s %s, Accept-Datetime: %s" % (
-                 req_method, req_path, req_datetime))
+    force_cache_refresh = env.get('HTTP_CACHE_CONTROL') == 'no-cache'
+    logging.info("Incoming request: %s %s, Accept-Datetime: %s , Force Refresh: %s" % (
+                 req_method, req_path, req_datetime, force_cache_refresh))
 
     # Escaping all other than 'GET' requests:
     if req_method != 'GET' and req_method != 'HEAD':
@@ -116,7 +117,7 @@ def application(env, start_response):
             if len(req_path.split('/', 1)) > 1:
                 #removes leading 'TIMEGATE_URI_PART/'
                 req_uri = req_path.split('/', 1)[1]
-                return timegate(req_uri, start_response, req_datetime)
+                return timegate(req_uri, req_datetime, start_response, force_cache_refresh)
             else:
                 raise TimegateError("Incomplete timegate request. \n"
                                     "    Syntax: GET /timegate/:resource", 400)
@@ -132,7 +133,7 @@ def application(env, start_response):
                 req_mime = req_path.split('/', 2)[1]
                 #removes leading 'TIMEMAP_URI_PART/MIME_TYPE/'
                 req_uri = req_path.split('/', 2)[2]
-                return timemap(req_uri, req_mime, start_response)
+                return timemap(req_uri, req_mime, start_response, force_cache_refresh)
             else:
                 raise TimegateError("Incomplete timemap request. \n"
                                     "    Syntax: GET /timemap/:type/:resource", 400)
@@ -361,10 +362,9 @@ def get_cached_timemap(uri_r, before=None):
             return cache.get_until(uri_r, before)
         else:
             return cache.get_all(uri_r)
-    return None
 
 
-def timegate(req_uri, start_response, req_datetime):
+def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
     """
     Handles timegate high-level logic. Fetch the Memento for the requested URI
     at the requested date time. Returns a HTTP 302 response if it exists.
@@ -388,7 +388,9 @@ def timegate(req_uri, start_response, req_datetime):
     # Runs the handler's API request for the Memento
     first = last = None
     if HAS_TIMEMAP:
-        mementos = get_cached_timemap(uri_r, accept_datetime)
+        mementos = None
+        if not force_cache_refresh:
+            mementos = get_cached_timemap(uri_r, accept_datetime)
         if mementos is None:
             if HAS_TIMEGATE:
                 logging.debug('Using single-request mode.')
@@ -410,7 +412,7 @@ def timegate(req_uri, start_response, req_datetime):
 # TODO change each % to str.format()
 
 
-def timemap(req_uri, req_mime, start_response):
+def timemap(req_uri, req_mime, start_response, force_cache_refresh=False):
     """
     Handles TimeMap high-level logic. Fetches all Mementos for an Original
     Resource and builds the TimeMap response. Returns a HTTP 200 response if it
@@ -428,11 +430,13 @@ def timemap(req_uri, req_mime, start_response):
     # Rewrites the original URI from the requested resource
     uri_r = get_complete_uri(resource)
     if HAS_TIMEMAP:
-        mementos = get_cached_timemap(uri_r)
+        mementos = None
+        if not force_cache_refresh:
+            mementos = get_cached_timemap(uri_r)
         if mementos is None:
             mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
     else:
-        raise TimegateError("Cannot serve TimeMaps.", 400)  # TODO put in const
+        raise TimegateError("Cannot serve TimeMaps.", 400)
 
     # Generates the TimeMap response body and Headers
     if req_mime.startswith(JSON_URI_PART):
