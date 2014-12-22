@@ -6,7 +6,7 @@ import glob
 import logging
 import json
 
-from core.constants import (DATE_FORMAT, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE, JSON_URI_PART,LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI)
+from core.constants import (DATE_FORMAT, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE,  MOD_PATH, CACHE_MAX_SIZE, JSON_URI_PART,LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI)
 from errors.timegateerrors import (TimegateError, URIRequestError, CacheError)
 from core.cache import Cache
 from core.handler import parsed_request, Handler
@@ -55,16 +55,24 @@ def discover_handler(path):
     if found_handlers == 0:
         raise Exception("No handler found in %s . \n    Make sure that the handler is a subclass of `Handler` of module core.handler." % path)
     else:
-        handler_has_timegate = hasattr(api_handler, 'get_memento')
-        handler_has_timemap = hasattr(api_handler, 'get_all_mementos')
-        if handler_has_timegate or handler_has_timemap:
-            return api_handler, handler_has_timegate, handler_has_timemap
-        else:
-            raise NotImplementedError("NotImplementedError: Handler has neither `get_memento` nor `get_all_mementos` method.")
+        return api_handler
 
 # Handler loading
 try:
-    handler, HAS_TIMEGATE, HAS_TIMEMAP = discover_handler(EXTENSIONS_PATH)
+    if MOD_PATH:
+        dot_index = MOD_PATH.rfind('.')
+        mod = importlib.import_module(MOD_PATH[:dot_index])
+        handler_class = getattr(mod, MOD_PATH[dot_index+1:])
+        logging.info("Found handler %s" % handler_class)
+        handler = handler_class()
+    else:
+        handler = discover_handler(EXTENSIONS_PATH)
+
+    HAS_TIMEGATE = hasattr(handler, 'get_memento')
+    HAS_TIMEMAP = hasattr(handler, 'get_all_mementos')
+    if not (HAS_TIMEGATE or HAS_TIMEMAP):
+        raise NotImplementedError("NotImplementedError: Handler has neither `get_memento` nor `get_all_mementos` method.")
+
 except Exception as e:
     logging.critical("Exception during handler loading: %s" % e.message)
     raise e

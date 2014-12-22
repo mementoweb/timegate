@@ -46,10 +46,12 @@ STRICT_TIME = conf.getboolean('server', 'strict_datetime')
 API_TIME_OUT = conf.getfloat('server', 'api_time_out')
 
 ## Handler configuration
+MOD_PATH = None
+BASE_URI = ''
+if conf.has_option('handler', 'handler_class'):
+    MOD_PATH = unicode.encode(conf.get('handler', 'handler_class'), 'utf-8')
 if conf.has_option('handler', 'base_uri'):
     BASE_URI = unicode.encode(conf.get('handler', 'base_uri'), 'utf-8')
-else:
-    BASE_URI = ''
 if conf.getboolean('handler', 'is_vcs'):
     RESOURCE_TYPE = 'vcs'
 else:
