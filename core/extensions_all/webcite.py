@@ -14,7 +14,7 @@ from core.handler import Handler
 __author__ = "Robert Sanderson, Yorick Chollet"
 
 
-class WebHandler(Handler):
+class WebCiteHandler(Handler):
 
     def __init__(self):
         Handler.__init__(self)

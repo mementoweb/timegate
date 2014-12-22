@@ -96,7 +96,6 @@ def application(env, start_response):
     # Extracting HTTP request values
 
     req_path = env.get('REQUEST_URI', '/')
-    print req_path
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
     req_method = env.get('REQUEST_METHOD')
     force_cache_refresh = env.get('HTTP_CACHE_CONTROL') == 'no-cache'
