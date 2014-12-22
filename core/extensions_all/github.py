@@ -37,7 +37,7 @@ class GitHubHandler(Handler):
         self.file_rex = re.compile('(/blob)?/master')  # The regex for files
 
     def get_all_mementos(self, uri):
-        MAX_TIME = 20 #seconds
+        MAX_TIME = 120 #seconds
 
         # URI deconstruction
         match = self.rex.match(uri)

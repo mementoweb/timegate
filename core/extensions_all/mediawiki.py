@@ -3,7 +3,10 @@ import logging
 __author__ = 'Yorick Chollet'
 
 from core.handler import Handler
+from lxml import etree
+import StringIO
 from errors.timegateerrors import HandlerError
+import urlparse
 
 from core.timegate_utils import date_str
 
@@ -22,8 +25,7 @@ class MediaWikiHandler(Handler):
     #
     #     return self.query(uri, params)
 
-    # This example requires the datetime
-    def get_memento(self, uri, accept_datetime):
+    def get_memento(self, req_uri, accept_datetime):
         timestamp = date_str(accept_datetime, self.TIMESTAMPFMT)
         params = {
             'rvlimit': 1,  # Only need one
@@ -31,30 +33,48 @@ class MediaWikiHandler(Handler):
             'rvdir': 'older'  # List in decreasing order
         }
 
-        return self.query(uri, params)
 
-        #TODO API response if undefined.
+        # Finds the API and title using scraping
+        api_base_uri = None
+        try:
+            dom = self.get_xml(req_uri, html=True)
+            links = dom.xpath("//link")
+            for link in links:
+                if link.attrib['rel'].lower() == "edituri":
+                    api_base_uri = link.attrib['href'].split("?")[0]
+                    if api_base_uri.startswith("//"):
+                        api_base_uri = api_base_uri.replace("//", "http://")
+            parsed_url = urlparse.urlparse(req_uri)
+            try:
+                title = urlparse.parse_qs(parsed_url[4])['title'][0]
+            except Exception as e:
+                title = parsed_url.path.split('/')[-1]
+            logging.debug("Mediawiki handler: API found: %s, page title parsed to: %s " % (api_base_uri, title) )
+            if not title:
+                raise HandlerError("Cannot find Title", 404)
+            if not api_base_uri:
+                raise HandlerError("Cannot find mediawiki API on page", 404)
 
-    def query(self, uri, req_params):
+        except HandlerError as he:
+            raise he
+        except Exception as e:
+            logging.error("ERROR querying and parsing page for title/api %s. handler will return empty response" % e.message)
+            return None
 
-        match = self.rex.match(uri)
-      #  assert bool(match) not true in single request
+        base_uri = api_base_uri.replace("api.php", "index.php")
 
-        if not match:
-            raise HandlerError('Not Found: Not a valid resource for this handler.', 404)
+        return self.query(req_uri, params, title, api_base_uri, base_uri)
 
-        base = match.groups()[0]
-        resource = match.groups()[2]  # Note that anchors can be included
+    def query(self, req_uri, req_params, title, api_base_uri, base_uri):
+        print api_base_uri, base_uri
 
-        # Mediawiki API parameters
-        apibase = base+self.api_part
         params = {
             'action': 'query',
             'format': 'json',
             'prop': 'revisions',
             'rvprop': 'ids|timestamp',
             'indexpageids': '',
-            'titles': resource
+            'titles': title
         }
         params.update(req_params)
 
@@ -64,19 +84,19 @@ class MediaWikiHandler(Handler):
         while condition:
             # Clone original request
             newparams = params.copy()
-            req = self.request(apibase, params=newparams)
+            req = self.request(api_base_uri, params=newparams)
             if req.status_code == 404:
                 raise HandlerError("Cannot find resource on version server.", 404)
             try:
                 result = req.json()
             except Exception as e:
-                logging.error("No JSON can be decoded from API %s" % apibase)
+                logging.error("No JSON can be decoded from API %s" % api_base_uri)
                 raise HandlerError("No API answer.", 404)
             if 'error' in result:
                 raise HandlerError(result['error'])
             if 'warnings' in result:
                 logging.warn(result['warnings'])
-            try: #TODO clean this
+            try:
                 # The request was successful
                 pid = result['query']['pageids'][0]  # the JSON key of the page (only one)
                 queries_results += result['query']['pages'][pid]['revisions']
@@ -86,7 +106,7 @@ class MediaWikiHandler(Handler):
             except Exception as e:
                 if req_params['rvdir'] == 'older':
                     req_params['rvdir'] = 'newer'
-                    return self.query(uri, req_params)
+                    return self.query(req_uri, req_params, title, api_base_uri, base_uri)
                 else:
                     raise HandlerError("No revision returned from API.", 404)
             if 'continue' in result:
@@ -101,10 +121,34 @@ class MediaWikiHandler(Handler):
 
         # Processing list
         def f(rev):
-            rev_uri = base + self.mementos_part + '?title=%s&oldid=%d' % (
-                resource, rev['revid'])
+            rev_uri = base_uri + '?title=%s&oldid=%d' % (
+                title, rev['revid'])
             dt = rev['timestamp']
             return (rev_uri, dt)
-        logging.debug("Returning API results of size %d" % len(queries_results))
 
+
+        logging.debug("Returning API results of size %d" % len(queries_results))
         return map(f, queries_results)
+
+    def get_xml(self, uri, html=False):
+        """
+        Retrieves the resource using the url, parses it as XML or HTML
+        and returns the parsed dom object.
+        :param uri: [str] The uri to retrieve
+        :param headers: [dict(header_name: value)] optional http headers to send in the request
+        :param html: [bool] optional flag to parse the response as HTML
+        :return: [lxml_obj] parsed dom.
+        """
+
+        page = self.request(uri)
+        page_data = page.content
+        try:
+            if not html:
+                parser = etree.XMLParser(recover=True)
+            else:
+                parser = etree.HTMLParser(recover=True)
+            return etree.parse(StringIO.StringIO(page_data), parser)
+        except Exception as e:
+            logging.error("Cannot parse XML/HTML from %s" % uri)
+            raise HandlerError("Couldn't parse data from %s" % uri)
+
