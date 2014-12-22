@@ -5,33 +5,46 @@ __author__ = 'Yorick Chollet'
 from dateutil.relativedelta import relativedelta
 import logging
 
-from errors.timegateerrors import HandlerError, CacheError
-from handler import validate_response
+from errors.timegateerrors import CacheError
+from handler import parsed_request
 
 from werkzeug.contrib.cache import FileSystemCache, md5
 
 
 class Cache:
 
-    def __init__(self, path, tolerance, expiration, max_size):
+    def __init__(self, path, tolerance, expiration, max_size, run_tests=True):
         """
         Constructor method
         :param path: The path of the cache database file.
         :param tolerance: The tolerance, in seconds to which a TimeMap is considered young enough to be used as is.
         :param expiration: How long, in seconds, the cache entries are stored every get will be a CACHE MISS.
         :param max_size: The maximum size, in Bytes for the cache data folder
+        :param run_tests: (Optional) Tests the cache at initialization.
         :return:
         """
 
-        # TODO add LRU somewhere environ 100MB
         self.tolerance = relativedelta(seconds=tolerance)
-        self.path = path.rstrip('/')  # +'.db'
+        self.path = path.rstrip('/')
         self.max_file_size = 1e+6  # TODO from len(uri) * tmsize + x
-        self.max_values = int(max_size / self.max_file_size)
+        self.max_values = int(max_size / self.max_file_size) * 2
 
         self.backend = FileSystemCache(path,
-                                       threshold=3,  # self.max_values
-                                       default_timeout=expiration)  # TODO configurations
+                                       threshold=self.max_values,
+                                       default_timeout=expiration)
+
+        # Testing cache
+        if run_tests:
+            try:
+                key = '1'
+                val = 1
+                self.backend.set(key, val)
+                assert self._check_size(key) > 0
+                assert self.backend.get(key) == val
+                os.remove(self.path+'/' + md5(key).hexdigest())
+            except Exception as e:
+                raise CacheError("Error testing cache: %s" % e.message)
+
         logging.debug("Cache created. max_files = %d. Expiration = %d " % (self.max_values, expiration))
 
     def get_until(self, uri_r, date):
@@ -51,7 +64,7 @@ class Cache:
             val = self.backend.get(key)
         except Exception as e:
             logging.error("Exception loading cache content: %s" % e.message)
-            raise CacheError("Exception loading cache content")
+            return None
 
         if val:
             # There is a value in the cache
@@ -86,14 +99,7 @@ class Cache:
         :param kwargs: *getter* keywords arguments
         :return: The fresh TimeMap
         """
-        try:
-            # Requests the data
-            timemap = validate_response(getter(*args, **kwargs))
-        except HandlerError as he:
-            raise he
-        except Exception as e:
-            logging.error("Error getting and parsing handler response: %s" % e.message)
-            raise HandlerError("Error getting and parsing handler response")
+        timemap = parsed_request(getter, *args, **kwargs)
         # Creates or refreshes the new timemap for that URI-R
         self._set(uri_r, timemap)
         return timemap
@@ -115,17 +121,16 @@ class Cache:
             self._check_size(uri_r)
         except Exception as e:
             logging.error("Error setting cache value: %s" % e.message)
-            raise CacheError("Error setting cache value")
 
-    def _check_size(self, uri, delete=True):
+    def _check_size(self, key, delete=True):
         """
         Checks the size that a specific TimeMap value is using on disk. Deletes if it is more than the maximum size
-        :param uri: The TimeMap original resource
+        :param key: The TimeMap original resource
         :param delete: (Optional) When true, the value is deleted. Else only a warning is raised.
         :return: the size of the value on disk (0 if it was deleted)
         """
         try:
-            fname = md5(uri).hexdigest()  # werkzeug key
+            fname = md5(key).hexdigest()  # werkzeug key
             fpath = self.path+'/' + fname
             size = os.path.getsize(fpath)
             if size > self.max_file_size and delete:
@@ -134,9 +139,9 @@ class Cache:
                     message += ". Deleting cached value."
                     os.remove(fpath)
                     size = 0
-                logging.warning(message % (size, self.max_file_size, uri))
+                logging.warning(message % (size, self.max_file_size, key))
             return size
         except Exception as e:
-            logging.error("Exception checking cache value size for TimeMap of %s Exception: %s" % (uri, e.message))
+            logging.error("Exception checking cache value size for TimeMap of %s Exception: %s" % (key, e.message))
             return 0
 

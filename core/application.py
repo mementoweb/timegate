@@ -9,7 +9,7 @@ import json
 from core.constants import (DATE_FORMAT, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE, JSON_URI_PART,LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI)
 from errors.timegateerrors import (TimegateError, URIRequestError, CacheError)
 from core.cache import Cache
-from core.handler import validate_response, Handler
+from core.handler import parsed_request, Handler
 from core.timegate_utils import (nowstr, validate_req_datetime, parse_req_resource, best, date_str, now, get_complete_uri)
 
 
@@ -77,7 +77,7 @@ if CACHE_USE:
         cache_activated = True
         logging.info("Cached started: cache file: %s, cache refresh: %d seconds, max_size: %d Bytes" % (CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE))
     except Exception as e:
-        logging.error("Exception during cache loading. Cache deactivated. Check permissions")
+        logging.error("Exception during cache loading: %s. Cache deactivated. Check permissions" % e.message)
 else:
     logging.info("Cache not used.")
 
@@ -94,7 +94,9 @@ def application(env, start_response):
     """
 
     # Extracting HTTP request values
-    req_path = env.get('PATH_INFO', '/')
+
+    req_path = env.get('REQUEST_URI', '/')
+    print req_path
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
     req_method = env.get('REQUEST_METHOD')
     force_cache_refresh = env.get('HTTP_CACHE_CONTROL') == 'no-cache'
@@ -124,6 +126,9 @@ def application(env, start_response):
         except TimegateError as e:
             logging.info("End of timegate request due to TimegateError : %s" % e.message)
             return error_response(e.status, start_response, e.message)
+        except Exception as e:
+            logging.critical("End of timegate request due to an unhandled Exception : %s" % e.message)
+            return error_response(503, start_response)
 
     # Serving TimeMap Request
     elif req_type == TIMEMAP_URI_PART:
@@ -138,8 +143,12 @@ def application(env, start_response):
                 raise TimegateError("Incomplete timemap request. \n"
                                     "    Syntax: GET /timemap/:type/:resource", 400)
         except TimegateError as e:
-            logging.info("End of timegate request due to TimegateError : %s" % e.message)
+            logging.info("End of timemap request due to TimegateError : %s" % e.message)
             return error_response(e.status, start_response, e.message)
+        except Exception as e:
+            logging.critical("End of timemap request due to an unhandled Exception : %s" % e.message)
+            return error_response(503, start_response)
+
 
     # Unknown Service Request
     else:
@@ -345,7 +354,7 @@ def get_and_cache(uri_r, getter, *args, **kwargs):
     if cache_activated:
         return cache.refresh(uri_r, getter, *args, **kwargs)
     else:
-        return validate_response(getter(*args, **kwargs))
+        return parsed_request(getter, *args, **kwargs)
 
 
 def get_cached_timemap(uri_r, before=None):
@@ -394,7 +403,7 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
         if mementos is None:
             if HAS_TIMEGATE:
                 logging.debug('Using single-request mode.')
-                mementos = validate_response(handler.get_memento(uri_r, accept_datetime))
+                mementos = parsed_request(handler.get_memento, uri_r, accept_datetime)
             else:
                 logging.debug('Using multiple-request mode.')
                 mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
@@ -403,7 +412,7 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
         else:
             first = mementos[0]  # The cached first will never change, not the last
     else:
-        mementos = validate_response(handler.get_memento(uri_r, accept_datetime))
+        mementos = parsed_request(handler.get_memento, uri_r, accept_datetime)
 
     # If the handler returned several Mementos, take the closest
     memento = best(mementos, accept_datetime, RESOURCE_TYPE)

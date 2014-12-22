@@ -59,7 +59,7 @@ def parse_req_resource(pathstr):
     try:
         # Replacing white spaces
         path = pathstr.replace(' ', '%20')
-        path = path.replace('&', '%26')
+        # path = path.replace('&', '%26')
         uri = validate_uristr(path)
         logging.debug("Requested URI parsed to: "+uri)
         return uri

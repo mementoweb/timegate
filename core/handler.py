@@ -33,31 +33,42 @@ class Handler:
 
         # Request logging with params
         try:
-            logging.info("Sending API request for %s?%s" % (
+            logging.info("Sending request for %s?%s" % (
                 uri, '&'.join(map(lambda(k, v): '%s=%s' % (k, v), kwargs['params'].items()))))
         except Exception:
             # Key errors on 'params'
-            logging.info("Sending API request for %s" % uri)
+            logging.info("Sending request for %s" % uri)
 
         try:
             req = requests.get(uri, timeout=timeout, **kwargs)
         except Exception as e:
-            logging.error("Cannot request version server (%s): %s" % (uri, e.message))
+            logging.error("Cannot request server (%s): %s" % (uri, e.message))
             raise HandlerError("Cannot request version server.", 502)
 
         if req is None:
-            logging.error("Error requesting version server (%s): %s" % uri)
+            logging.error("Error requesting server (%s): %s" % uri)
             raise HandlerError("Error requesting version server.", 502)
         return req
 
 
-def validate_response(handler_response):
+def parsed_request(handler_function, *args, **kwargs):
     """
-    Controls and parses the response from the Handler.
-    :param handler_response: Either None, a tuple (URI, date) or a list  [(URI, date),...]
-    where one tuple can have 'None' date to indicate that this URI is the original resource's.
+    Retrieves, and parses the response from the Handler.
+    This function is the point of entry to all handler requests
+    :param handler_function: The function to call
+    :param args: Arguments to :handler_function:
+    :param kwargs: Keywords arguments to :handler_function:
     :return: A sorted [(URI_str, date_obj),...] list of all Mementos. In the response, and all URIs/dates are valid.
+    :raise HandlerError: In case of a bad response from the handler
     """
+    try:
+        handler_response = handler_function(*args, **kwargs)
+    except HandlerError as he:
+        logging.info("Handler raised HandlerError %s" % he.message)
+        raise he  # HandlerErrors have return data.
+    except Exception as e:
+        logging.error("Handler raised exception %s" % e.message)
+        raise HandlerError("Error in Handler", 503)
 
     # Input check
     if not handler_response:
