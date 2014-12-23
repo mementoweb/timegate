@@ -7,11 +7,7 @@ from errors.timegateerrors import HandlerError
 
 import time
 
-ACCEPTABLE_RESOURCE = """Acceptable resources URI:
-repositories (github.com/:user/:repo/),
-folders (github.com/:user/:repo/trees/:path),
-files (github.com/:user/:repo/blob/:path)
-and raw files (raw.githubusercontent.com/:user/:repo/master/:path)"""
+ACCEPTABLE_RESOURCE = """Acceptable resources URI: repositories (github.com/:user/:repo/), folders (github.com/:user/:repo/trees/:path), files (github.com/:user/:repo/blob/:path) and raw files (raw.githubusercontent.com/:user/:repo/master/:path)"""
 
 
 class GitHubHandler(Handler):

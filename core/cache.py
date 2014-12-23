@@ -26,8 +26,8 @@ class Cache:
 
         self.tolerance = relativedelta(seconds=tolerance)
         self.path = path.rstrip('/')
-        self.max_file_size = 1e+6  # TODO from len(uri) * tmsize + x
-        self.max_values = int(max_size / self.max_file_size) * 2
+        self.max_file_size = 30e+5  # TODO from len(uri) * tmsize + x
+        self.max_values = int(max_size / self.max_file_size)
 
         self.backend = FileSystemCache(path,
                                        threshold=self.max_values,

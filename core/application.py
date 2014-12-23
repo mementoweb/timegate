@@ -12,15 +12,6 @@ from core.cache import Cache
 from core.handler import parsed_request, Handler
 from core.timegate_utils import (nowstr, validate_req_datetime, parse_req_resource, best, date_str, now, get_complete_uri)
 
-
-#TODO restructuredtext comments and docstring
-#TODO sphinx
-
-
-# Initialization code
-# Logger configuration
-# logging.basicConfig(filename=LOG_FILE, filemode='w',
-#                     format=LOG_FMT, level=logging.INFO) # release
 logging.basicConfig(filemode='w', format=LOG_FORMAT, level=logging.DEBUG)
 logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
@@ -104,6 +95,9 @@ def application(env, start_response):
     # Extracting HTTP request values
 
     req_path = env.get('REQUEST_URI', '/')
+    tg_index = req_path.find(TIMEGATE_URI_PART+'/')
+    tm_index = req_path.find(TIMEMAP_URI_PART+'/')
+
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
     req_method = env.get('REQUEST_METHOD')
     force_cache_refresh = env.get('HTTP_CACHE_CONTROL') == 'no-cache'
@@ -116,12 +110,10 @@ def application(env, start_response):
         message = "Request method '%s' not allowed." % req_method
         return error_response(status, start_response, message)
 
-    # Processing request service type and path
-    req_path = req_path.lstrip('/')
-    req_type = req_path.split('/', 1)[0]
-
     # Serving TimeGate Request
-    if req_type == TIMEGATE_URI_PART:
+    if tg_index >= 0:
+        # Trunkating all before 'timegate/'
+        req_path = req_path[tg_index:]
         try:
             if len(req_path.split('/', 1)) > 1:
                 #removes leading 'TIMEGATE_URI_PART/'
@@ -138,7 +130,9 @@ def application(env, start_response):
             return error_response(503, start_response)
 
     # Serving TimeMap Request
-    elif req_type == TIMEMAP_URI_PART:
+    elif tm_index >= 0:
+        # Trunkating all before 'timemap/'
+        req_path = req_path[tm_index:]
         try:
             if len(req_path.split(('/'), 2)) > 2:
                 # gets the mime type for timemap (JSON or LINK)
@@ -156,12 +150,11 @@ def application(env, start_response):
             logging.critical("End of timemap request due to an unhandled Exception : %s" % e.message)
             return error_response(503, start_response)
 
-
     # Unknown Service Request
     else:
         status = 400
-        message = "Service request type '%s' does not match '%s' or '%s'" % (
-                  req_type, TIMEMAP_URI_PART, TIMEGATE_URI_PART)
+        message = "Service request does contain '*/%s/<URI>' or '*/%s/<URI>'" % (
+                  TIMEMAP_URI_PART, TIMEGATE_URI_PART)
         return error_response(status, start_response, message)
 
 

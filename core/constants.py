@@ -38,11 +38,12 @@ TM_MAX_SIZE = 100000
 ### Configuration constants
 
 conf = ConfigParser()
-conf.read('conf/config.ini')
+with open('conf/config.ini') as f:
+    conf.read_file(f)
 
 ## Server configuration
 HOST = unicode.encode(conf.get('server', 'host'), 'utf-8').rstrip('/')
-STRICT_TIME = conf.getboolean('server', 'strict_datetime')
+STRICT_TIME = True  # conf.getboolean('server', 'strict_datetime')
 API_TIME_OUT = conf.getfloat('server', 'api_time_out')
 
 ## Handler configuration
@@ -59,9 +60,9 @@ else:
 
 ## Cache
 # When False, all cache requests will be cache MISS
-CACHE_USE = conf.getboolean('cache', 'activated')
+CACHE_USE = conf.getboolean('cache', 'cache_activated')
 # Time window in which the cache value is considered young enough to be valid
-CACHE_TOLERANCE = conf.getint('cache', 'refresh_time')
+CACHE_TOLERANCE = conf.getint('cache', 'cache_refresh_time')
 # Cache files paths
 CACHE_DIRECTORY = unicode.encode(conf.get('cache', 'cache_directory'), 'utf-8').rstrip('/')
 # Cache data file maximum size (in bytes)

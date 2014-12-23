@@ -55,12 +55,11 @@ To stop the server:
 ## Configuring the server
 Config file: `conf/config.ini`
 - `host` The server's base URI
-- `strict_datetime` When `false`, the server will try to parse Accept-Datetime header values that do not comply with the RFC
 - `api_time_out` Time, in seconds, before a request to an API times out. Default 5 seconds
 - `is_vcs` When `true`, the resource is considered complete, thus the best memento for a date D will be the closest *before* D. When `false`, the history is considered to be snapshots, thus the best memento is the *absolute* closest to the requested date.
 - `base_uri` (Optional) String that will be prepended to requested URI if missing. This can be used to shorten the request URI and to avoid repeating the base URI that is common to all resources. For example using `base_uri = http://` or `base_uri = https://example.com/long/path/to/all/resources/`.
-- `activated` When `true`, the cache stores TimeMap (from APIs that allows batch `get_all_mementos` requests. When false the cache files are not created.
-- `refresh_time` Time in seconds, for which it is assumed that a TimeMap didn't change. Any TimeGate request for a datetime past this period (or any TimeMap request past this period) will trigger a refresh of the cached value. Default 3600 seconds
+- `cache_activated` When `true`, the cache stores TimeMap (from APIs that allows batch `get_all_mementos` requests. When false the cache files are not created.
+- `cache_refresh_time` Time in seconds, for which it is assumed that a TimeMap didn't change. Any TimeGate request for a datetime past this period (or any TimeMap request past this period) will trigger a refresh of the cached value. Default 3600 seconds
 - `cache_directory` Relative path for data and lock files
 - `cache_max_size` The maximum size of the cache directory, in MB. The cache will start deleting values before this limit is reached.
 
