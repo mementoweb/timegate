@@ -58,6 +58,8 @@ if conf.getboolean('handler', 'is_vcs'):
 else:
     RESOURCE_TYPE = 'snapshot'
 
+USE_TIMEMAPS = conf.getboolean('handler', 'use_timemap')
+
 ## Cache
 # When False, all cache requests will be cache MISS
 CACHE_USE = conf.getboolean('cache', 'cache_activated')

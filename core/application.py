@@ -6,8 +6,8 @@ import glob
 import logging
 import json
 
-from core.constants import (DATE_FORMAT, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE,  MOD_PATH, CACHE_MAX_SIZE, JSON_URI_PART,LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI)
-from errors.timegateerrors import (TimegateError, URIRequestError, CacheError)
+from core.constants import (DATE_FORMAT, USE_TIMEMAPS, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE,  MOD_PATH, CACHE_MAX_SIZE, JSON_URI_PART,LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI)
+from errors.timegateerrors import (TimegateError, URIRequestError)
 from core.cache import Cache
 from core.handler import parsed_request, Handler
 from core.timegate_utils import (nowstr, validate_req_datetime, parse_req_resource, best, date_str, now, get_complete_uri)
@@ -61,7 +61,11 @@ try:
 
     HAS_TIMEGATE = hasattr(handler, 'get_memento')
     HAS_TIMEMAP = hasattr(handler, 'get_all_mementos')
+    if USE_TIMEMAPS and (not HAS_TIMEMAP):
+        logging.error("Handler has no get_all_mementos() function but is suppose to serve timemaps.")
+
     if not (HAS_TIMEGATE or HAS_TIMEMAP):
+        logging.critical("NotImplementedError: Handler has neither `get_memento` nor `get_all_mementos` method.")
         raise NotImplementedError("NotImplementedError: Handler has neither `get_memento` nor `get_all_mementos` method.")
 
 except Exception as e:
@@ -438,12 +442,14 @@ def timemap(req_uri, req_mime, start_response, force_cache_refresh=False):
     resource = parse_req_resource(req_uri)
     # Rewrites the original URI from the requested resource
     uri_r = get_complete_uri(resource)
-    if HAS_TIMEMAP:
+    if HAS_TIMEMAP and USE_TIMEMAPS:
         mementos = None
         if not force_cache_refresh:
             mementos = get_cached_timemap(uri_r)
         if mementos is None:
             mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
+    elif not USE_TIMEMAPS:
+        raise TimegateError("TimeMaps requests deactivated.", 400)
     else:
         raise TimegateError("Cannot serve TimeMaps.", 400)
 
