@@ -99,8 +99,16 @@ def application(env, start_response):
     # Extracting HTTP request values
 
     req_path = env.get('REQUEST_URI', '/')
+
+    # Finds the request type
     tg_index = req_path.find(TIMEGATE_URI_PART+'/')
     tm_index = req_path.find(TIMEMAP_URI_PART+'/')
+    # If both are present, take the first one
+    if tg_index >= 0 and tm_index >= 0:
+        if tg_index > tm_index:
+            tg_index = -1
+        else:
+            tm_index = -1
 
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
     req_method = env.get('REQUEST_METHOD')
@@ -185,7 +193,7 @@ def error_response(status, start_response, message="Internal server error."):
     return [body]
 
 
-def memento_response(memento, uri_r, resource, start_response, first=None, last=None, has_timemap=True):
+def memento_response(memento, uri_r, resource, start_response, first=None, last=None, has_timemap=False):
     """
     Returns a 302 redirection to the best Memento
     for a resource and a datetime requested by the user.
@@ -202,7 +210,7 @@ def memento_response(memento, uri_r, resource, start_response, first=None, last=
     # Gather links containing original and if availible: TimeMap, first, last
     # TimeGate link not allowed here
     links = ['<%s>; rel="original"' % uri_r]
-    if has_timemap:
+    if has_timemap and USE_TIMEMAPS:
         timemap_link = '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
         timemap_json = '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
         links.append('<%s>; rel="timemap"; type="application/link-format"' % timemap_link)
@@ -218,7 +226,7 @@ def memento_response(memento, uri_r, resource, start_response, first=None, last=
         links.append('<%s>; rel="first last memento"; datetime="%s"' % (uri_m, date_str(dt_m)))
     else:
         if first:
-            links.append('<%s>;rel="first memento";datetime="%s"' % (uri_first, date_str(dt_first)))
+            links.append('<%s>; rel="first memento"; datetime="%s"' % (uri_first, date_str(dt_first)))
         if (uri_first != uri_m and uri_last != uri_m):
             # The best memento is neither the first nor the last
             links.append('<%s>; rel="memento"; datetime="%s"' % (uri_m, date_str(dt_m)))
@@ -419,7 +427,7 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
 
     # If the handler returned several Mementos, take the closest
     memento = best(mementos, accept_datetime, RESOURCE_TYPE)
-    return memento_response(memento, uri_r, resource, start_response, first, last, has_timemap=hasattr(handler, 'get_all_mementos'))
+    return memento_response(memento, uri_r, resource, start_response, first, last, has_timemap=HAS_TIMEMAP)
 
 
 def timemap(req_uri, req_mime, start_response, force_cache_refresh=False):
