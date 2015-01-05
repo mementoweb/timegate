@@ -157,7 +157,7 @@ def application(env, start_response):
     # Unknown Service Request
     else:
         status = 400
-        message = "Service request does contain '*/%s/<URI>' or '*/%s/<URI>'" % (
+        message = "Service request does not contain '*/%s/<URI>' or '*/%s/<URI>'" % (
                   TIMEMAP_URI_PART, TIMEGATE_URI_PART)
         return error_response(status, start_response, message)
 
@@ -174,7 +174,7 @@ def error_response(status, start_response, message="Internal server error."):
 
     # Standard response header
     headers = [
-        ('Date', nowstr()),  # TODO check timezone
+        ('Date', nowstr()),
         ('Vary', 'accept-datetime'),
         ('Content-Length',  str(len(body))),
         ('Content-Type', 'text/plain; charset=UTF-8'),
@@ -228,7 +228,7 @@ def memento_response(memento, uri_r, resource, start_response, first=None, last=
     # Builds the response headers
     status = 302
     headers = [
-        ('Date', nowstr()),  # TODO check timezone
+        ('Date', nowstr()),
         ('Vary', 'accept-datetime'),
         ('Content-Length', '0'),
         ('Content-Type', 'text/plain; charset=UTF-8'),
@@ -236,7 +236,6 @@ def memento_response(memento, uri_r, resource, start_response, first=None, last=
         ('Location', uri_m),
         ('Link', ', '.join(links))
     ]
-    # TODO put all normal headers in conf.constants
     body = []
     start_response(HTTP_STATUS[status], headers)
     logging.info("Returning %d, Memento=%s for URI-R=%s" %
@@ -276,13 +275,13 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
 
     # Aggregates all link strings and constructs the TimeMap body
     links = [original_link, timegate_link, link_self, json_self]
-    links.extend(mementos_links)  # TODO modularizer ca...
+    links.extend(mementos_links)
     body = ',\n'.join(links) + '\n'
 
     # Builds HTTP Response and WSGI return
     status = 200
     headers = [
-        ('Date', nowstr()),  # TODO check timezone
+        ('Date', nowstr()),
         ('Content-Length', str(len(body))),
         ('Content-Type', 'application/link-format'),
         ('Connection', 'close')]
@@ -334,7 +333,7 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
     # Builds HTTP Response and WSGI return
     status = 200
     headers = [
-        ('Date', nowstr()),  # TODO check timezone
+        ('Date', nowstr()),
         ('Content-Length', str(len(response_json))),
         ('Content-Type', 'application/json'),
         ('Connection', 'close')]
@@ -421,8 +420,6 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
     # If the handler returned several Mementos, take the closest
     memento = best(mementos, accept_datetime, RESOURCE_TYPE)
     return memento_response(memento, uri_r, resource, start_response, first, last, has_timemap=hasattr(handler, 'get_all_mementos'))
-
-# TODO change each % to str.format()
 
 
 def timemap(req_uri, req_mime, start_response, force_cache_refresh=False):

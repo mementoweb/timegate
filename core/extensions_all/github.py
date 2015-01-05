@@ -47,8 +47,6 @@ class GitHubHandler(Handler):
         req_path = match.groups()[4]
 
         # GitHub API parameters
-        # Todo get commit url from api page...
-
         # Defining Resource type and response handling
         if req_path is None or req_path.startswith('/tree/master'):
             if req_path:

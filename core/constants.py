@@ -1,7 +1,6 @@
 __author__ = 'Yorick Chollet'
 
 from configparser import ConfigParser
-# TODO add all in one dictionnary
 ### Code constants
 HTTP_STATUS = {
     200: "200 OK",
@@ -58,7 +57,10 @@ if conf.getboolean('handler', 'is_vcs'):
 else:
     RESOURCE_TYPE = 'snapshot'
 
-USE_TIMEMAPS = conf.getboolean('handler', 'use_timemap')
+if conf.has_option('handler', 'use_timemap'):
+    USE_TIMEMAPS = conf.getboolean('handler', 'use_timemap')
+else:
+    USE_TIMEMAPS = False
 
 ## Cache
 # When False, all cache requests will be cache MISS

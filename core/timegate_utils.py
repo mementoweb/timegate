@@ -141,8 +141,6 @@ def closest(timemap, accept_datetime, sorted=True):
     :return:
     """
 
-    # TODO optimize
-
     delta = timedelta.max
     memento_uri = None
     memento_dt = None
@@ -170,8 +168,6 @@ def closest_before(timemap, accept_datetime, sorted=True):
     :param sorted: boolean to indicate if the list is sorted or not.
     :return: The uri_m string of the closest memento
     """
-
-    # TODO optimize
 
     delta = timedelta.max
     prev_uri = None

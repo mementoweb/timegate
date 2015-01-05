@@ -44,8 +44,8 @@ class NaraHandler(Handler):
                                     else:
                                         loc = self.baseuri + loc
                                 dtstr = a.get('onclick').split("'")[1] + " GMT"
-                                
-                                # if a.tail: # TODO check if needed here an in other handlers...
+
+                                # if a.tail:
                                 changes.append((loc, dtstr))
 
         return changes
