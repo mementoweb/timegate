@@ -53,7 +53,8 @@ class CrHandler(Handler):
         uris = re.findall(uriRegex, data)
         for u in uris:
             d = u.index("title")
-            loc = "http://haw.nsk.hr/"+u[45:d-2]
+
+            loc = "http://haw.nsk.hr/"+u[45:d-2].lstrip('/')
 
             result = dtregex.search( u)
             if result:
@@ -63,4 +64,5 @@ class CrHandler(Handler):
             dtstr = dtstr[6:10]+dtstr[3:5]+dtstr[0:2]+dtstr[11:19].replace(":", "") + " GMT"
             changes.append((loc, dtstr))
 
+        print changes
         return changes
