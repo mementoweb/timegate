@@ -64,5 +64,4 @@ class CrHandler(Handler):
             dtstr = dtstr[6:10]+dtstr[3:5]+dtstr[0:2]+dtstr[11:19].replace(":", "") + " GMT"
             changes.append((loc, dtstr))
 
-        print changes
         return changes

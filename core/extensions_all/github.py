@@ -1,4 +1,5 @@
 import re
+import requests
 
 __author__ = 'Yorick Chollet'
 
@@ -7,7 +8,7 @@ from errors.timegateerrors import HandlerError
 
 import time
 
-ACCEPTABLE_RESOURCE = """Acceptable resources URI: repositories (github.com/:user/:repo/), folders (github.com/:user/:repo/trees/:path), files (github.com/:user/:repo/blob/:path) and raw files (raw.githubusercontent.com/:user/:repo/master/:path)"""
+ACCEPTABLE_RESOURCE = """Acceptable resources URI: repositories (github.com/:user/:repo), folders (github.com/:user/:repo/tree/:branch/:path), files (github.com/:user/:repo/blob/:branch/:path) and raw files (raw.githubusercontent.com/:user/:repo/:branch/:path)"""
 
 
 class GitHubHandler(Handler):
@@ -27,7 +28,7 @@ class GitHubHandler(Handler):
                               ((?:raw.githubusercontent|github).com/)  # base
                               ([^/]+)/  # user
                               ([^/]+)  # repo
-                              (/.+)?  # optional path
+                              (/.*)?  # optional path
                               """, re.X)  # verbosed: ignore whitespaces and \n
         self.header_rex = re.compile('<(.+?)>; rel="next"')  # The regex for the query continuation header
         self.file_rex = re.compile('(/blob)?/master')  # The regex for files
@@ -46,55 +47,83 @@ class GitHubHandler(Handler):
         repo = match.groups()[3]
         req_path = match.groups()[4]
 
+        path = ''
+        branch = ''
+        mapper = None
+
         # GitHub API parameters
         # Defining Resource type and response handling
-        if req_path is None or req_path.startswith('/tree/master'):
-            if req_path:
-                path = req_path.replace('/tree/master', '', 1)
-            else:
-                path = '/'
+        if base == 'github.com/':
+            if not req_path or req_path == '/':
+                if req_path:
+                    path = '/'
+                # Resource is a directory
 
-            # Resource is a directory
-            def repo_tupler(commit):
-                return (commit['html_url']+'?path='+path,
-                        commit['commit']['committer']['date'])
+                def make_pair(commit):
+                    return (commit['html_url'].replace('commit', 'tree'),
+                            commit['commit']['committer']['date'])
+                mapper = make_pair
 
-            mapper = repo_tupler
-
-        elif bool(self.file_rex.match(req_path)):
+            elif req_path.startswith('/blob/'):
                 # Resource is a file
-                path = req_path.replace('/blob', '', 1).replace('/master', '', 1)
+                path = req_path.replace('/blob/', '', 1)
+                branch_index = path.find('/')
+                branch = path[:branch_index]
+                path = path[branch_index:]
+                if branch == '' or path == '' or path.endswith('/'):
+                    raise HandlerError("Not found. Empty path for file in repository", 404)
 
-                def file_tupler(commit):
-                    if base == 'github.com/':
-                        # HTML Resource
-                        memento_path = '/blob/%s%s' % (
-                            commit['sha'], path)
-                    else:
-                        # Raw Resource
-                        if path == '' or path.endswith('/'):
-                            raise HandlerError("'%s' not found: \n"
-                                            "Raw resource must be a file." %
-                                            path, 404)
-                        memento_path = '/%s%s' % (
-                            commit['sha'], path)
-
+                def make_pair(commit):
+                    # HTML Resource
+                    memento_path = '/blob/%s%s' % (commit['sha'], path)
                     uri_m = '%s%s%s/%s%s' % (
                         protocol, base, user, repo, memento_path)
                     return (uri_m, commit['commit']['committer']['date'])
+                mapper = make_pair
 
-                mapper = file_tupler
+            #removes `/tree/` and split the request into `branch`, `path`
+            elif req_path.startswith('/tree/'):
+                path = req_path.replace('/tree/', '', 1)
+                branch_index = path.find('/')
+                if branch_index < 0:
+                    branch_index = len(path)
+                branch = path[:branch_index]
+                path = path[branch_index:]
+                if branch == '':
+                    raise HandlerError("Not found. Empty branch path", 404)
 
-        else:
+                # Resource is a directory
+                def make_pair(commit):
+                    return (commit['html_url'].replace('commit', 'tree')+path,
+                            commit['commit']['committer']['date'])
+                mapper = make_pair
+
+        elif base == 'raw.githubusercontent.com/' and req_path is not None:
+            # Resource is a file
+            path = req_path.replace('/', '', 1)
+            branch_index = path.find('/')
+            branch = path[:branch_index]
+            path = path[branch_index:]
+            is_online = bool(requests.head(uri))  # must be done because API does not make any difference between path or files
+            if path == '' or path.endswith('/') or not is_online:
+                raise HandlerError("'%s' not found: Raw resource must be a file." %path, 404)
+
+            def file_tupler(commit):
+                memento_path = '/%s%s' % (commit['sha'], path)
+                uri_m = '%s%s%s/%s%s' % (protocol, base, user, repo, memento_path)
+                return (uri_m, commit['commit']['committer']['date'])
+            mapper = file_tupler
+
+        if mapper is None:
             # The resource is neither a file nor a directory.
-            raise HandlerError("GitHub resource type not found."
-                               + ACCEPTABLE_RESOURCE, 404)
+            raise HandlerError("GitHub resource type not found." + ACCEPTABLE_RESOURCE, 404)
 
         # Initiating request variables
         apibase = '%s/repos/%s/%s/commits' % (self.api, user, repo)
         params = {
             'per_page': 100,  # Max allowed is 100
-            'path': str(path)
+            'path': str(path),
+            'sha': str(branch)
         }
         auth = ('MementoTimegate', 'LANLTimeGate14')
         cont = apibase  # The first continue is the beginning
@@ -109,8 +138,7 @@ class GitHubHandler(Handler):
             cont = None
             if not req:
                 # status code different than 2XX
-                raise HandlerError("Cannot find resource on version server. API response %d'd " % req.status_code,
-                                   404)
+                raise HandlerError("Cannot find resource on version server. API response %d'd " % req.status_code, 404)
             result = req.json()
             if 'message' in result:
                 # API-specific error
@@ -135,5 +163,4 @@ class GitHubHandler(Handler):
             return map(mapper, queries_results)
         else:
             # No results found
-            raise HandlerError("Resource not found, empty response from API",
-                               404)
+            raise HandlerError("Resource not found, empty response from API", 404)
