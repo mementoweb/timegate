@@ -14,18 +14,20 @@ class ArxivHandler(Handler):
         Handler.__init__(self)
 
         # Resources
-        self.rex = re.compile('(http://arxiv.org)/((?:pdf)|(?:abs))/(.+)')
+
+        # Ignores all that trails the identifier (? params, vX version,...)
+        self.rex = re.compile(r'(http://arxiv.org)/((?:pdf)|(?:abs))/(\d+\.\d+)(.*)')
         self.api_base = 'http://export.arxiv.org/oai2'
 
     def get_all_mementos(self, uri_r):
         try:
             # Extract the resource ID
             match = self.rex.match(uri_r)
-            if match.groups()[1] == 'pdf':
-                uri_r = uri_r.replace('.pdf', '')
-            match_normalized = self.rex.match(uri_r)
-            parts = match_normalized.groups()
+            parts = match.groups()
+            base = parts[0]
+            type = parts[1]
             resource = parts[2]
+            normalized_uri = '%s/%s/%s' % (base, type, resource)
 
             # Prepars the API call
             params = {
@@ -43,7 +45,7 @@ class ArxivHandler(Handler):
             def mapper(version):
                 v = version.xpath('@*')[0]
                 date = version.find('./{http://arxiv.org/OAI/arXivRaw/}date').text
-                return (uri_r + v, date)
+                return (normalized_uri + v, date)
 
             return map(mapper, versions)
 
