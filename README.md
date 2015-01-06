@@ -6,7 +6,7 @@ The Memento protocol enables date time negotiation for web resources. With it, a
 * Suppose you have a snapshot of what this URI-R looked like in the past. We call such a snapshot a **Memento** and we refer to its URI as **URI-M**. There could be many snapshots of URI-R, taken at different moments in time, each with their distinct URI-Mi.
 
 Example
-[Image](https://raw.githubusercontent.com/mementoweb/timegate/master/doc/uris_example.png)
+![Image](https://raw.githubusercontent.com/mementoweb/timegate/master/doc/uris_example.png)
 
 With this setup, there are two steps to make such web resources Memento compliant.
 * Run the TimeGate server with your custom handler. The handler is the piece of code that is specific to the resources. It needs to implement either of the following: Given a URI-R, return the list of dated URI-Ms. Or given a URI-R and a date time, return one single dated URI-M.
@@ -16,7 +16,9 @@ With this setup, there are two steps to make such web resources Memento complian
   - For each Memento, add a Memento-Datetime header that conveys the snapshot datetime
 
 Using the previous example of Original Resource and Mementos, and suppose the TimeGate server is running at `http://example.com/timegate/`, HTTP response headers look as follows to be Memento compliant.
-[Image](https://raw.githubusercontent.com/mementoweb/timegate/master/doc/headers_example.png)
+![Image](https://raw.githubusercontent.com/mementoweb/timegate/master/doc/headers_example.png)
+
+And that's it, date time negotiation is now possible for the resource.
 
 ## Getting Started
 Start by [reading the guide](https://github.com/mementoweb/timegate/wiki/Getting-Started) for comprehensive information about the TimeGate server.
