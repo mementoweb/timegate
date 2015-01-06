@@ -49,9 +49,9 @@ class LocHandler(Handler):
 
             try:
                 req = self.request(iauri)
+                data = req.content
             except Exception as e:
                 continue
-            data = req.content
 
             try:
                 parser = etree.HTMLParser(recover=True)

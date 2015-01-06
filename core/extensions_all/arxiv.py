@@ -38,6 +38,8 @@ class ArxivHandler(Handler):
 
             # Queries the API and extract the values
             response = self.request(self.api_base, params=params)
+            if not response:
+                raise HandlerError("API response not 2XX", 404)
             root = etree.parse(StringIO(response.content), etree.XMLParser(recover=True))
             versions = root.findall('.//{http://arxiv.org/OAI/arXivRaw/}version')
 

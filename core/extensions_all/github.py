@@ -49,23 +49,24 @@ class GitHubHandler(Handler):
 
         path = ''
         branch = ''
+        # Processes one result to (memento, datetime) pair
         mapper = None
 
-        # GitHub API parameters
         # Defining Resource type and response handling
+        # Creates one function for a specific type to map the results to memento pairs.
         if base == 'github.com/':
+            # Resource is a repository
             if not req_path or req_path == '/':
                 if req_path:
                     path = '/'
-                # Resource is a directory
 
                 def make_pair(commit):
                     return (commit['html_url'].replace('commit', 'tree'),
                             commit['commit']['committer']['date'])
                 mapper = make_pair
 
+            # Resource is a file
             elif req_path.startswith('/blob/'):
-                # Resource is a file
                 path = req_path.replace('/blob/', '', 1)
                 branch_index = path.find('/')
                 branch = path[:branch_index]
@@ -81,7 +82,7 @@ class GitHubHandler(Handler):
                     return (uri_m, commit['commit']['committer']['date'])
                 mapper = make_pair
 
-            #removes `/tree/` and split the request into `branch`, `path`
+            # Resource is a directory
             elif req_path.startswith('/tree/'):
                 path = req_path.replace('/tree/', '', 1)
                 branch_index = path.find('/')
@@ -92,14 +93,13 @@ class GitHubHandler(Handler):
                 if branch == '':
                     raise HandlerError("Not found. Empty branch path", 404)
 
-                # Resource is a directory
                 def make_pair(commit):
                     return (commit['html_url'].replace('commit', 'tree')+path,
                             commit['commit']['committer']['date'])
                 mapper = make_pair
 
+        # Resource is a raw file
         elif base == 'raw.githubusercontent.com/' and req_path is not None:
-            # Resource is a file
             path = req_path.replace('/', '', 1)
             branch_index = path.find('/')
             branch = path[:branch_index]
@@ -108,14 +108,14 @@ class GitHubHandler(Handler):
             if path == '' or path.endswith('/') or not is_online:
                 raise HandlerError("'%s' not found: Raw resource must be a file." %path, 404)
 
-            def file_tupler(commit):
+            def make_pair(commit):
                 memento_path = '/%s%s' % (commit['sha'], path)
                 uri_m = '%s%s%s/%s%s' % (protocol, base, user, repo, memento_path)
                 return (uri_m, commit['commit']['committer']['date'])
-            mapper = file_tupler
+            mapper = make_pair
 
         if mapper is None:
-            # The resource is neither a file nor a directory.
+            # The resource is not accepcted.
             raise HandlerError("GitHub resource type not found." + ACCEPTABLE_RESOURCE, 404)
 
         # Initiating request variables

@@ -51,7 +51,7 @@ class Handler:
 
         if not req:
             logging.info("Response other than 2XX: %s" % req)
-            raise HandlerError("API response not 2XX", 404)
+            # raise HandlerError("API response not 2XX", 404)
         return req
 
 
