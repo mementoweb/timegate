@@ -13,12 +13,13 @@ With this setup, there are two steps to make such web resources Memento complian
 * Add HTTP headers required by the Memento protocol to responses from the Original Resource and its Mementos:
   - For the Original Resource, add a "Link" header that points at its TimeGate
   - For each Memento, add a "Link" header that points at the TimeGate
+  - For each Memento, add a "Link" header that points to the Original Resource
   - For each Memento, add a Memento-Datetime header that conveys the snapshot datetime
 
-Using the previous example of Original Resource and Mementos, and suppose the TimeGate server is running at `http://example.com/timegate/`, HTTP response headers look as follows to be Memento compliant.
+Using the previous example, and supposing a TimeGate server is running at `http://example.com/timegate/`, Memento HTTP response headers for the Original Resource and one Memento look as follows.
 ![Image](https://raw.githubusercontent.com/mementoweb/timegate/master/doc/headers_example.png)
 
-And that's it, date time negotiation is now possible for the resource.
+And that's it! With the TimeGate, date time negotiation is now possible for this resource.
 
 ## Getting Started
 Start by [reading the guide](https://github.com/mementoweb/timegate/wiki/Getting-Started) for comprehensive information about the TimeGate server.
