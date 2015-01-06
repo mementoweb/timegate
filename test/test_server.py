@@ -112,7 +112,6 @@ class TestServerRealSeq(unittest.TestCase):
 
 
 
-
 def suite():
     st = unittest.TestSuite()
     st.addTest(unittest.makeSuite(TestServerRealSeq))

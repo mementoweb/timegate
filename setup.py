@@ -1,8 +1,12 @@
 __author__ = 'Yorick Chollet'
+import os
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
 setup(name='timegate',
@@ -12,15 +16,7 @@ setup(name='timegate',
       url="https://github.com/mementoweb/timegate",
       download_url="https://github.com/mementoweb/timegate/releases",
       description="A Generic Memento TimeGate",
-      long_description="The TimeGate is a server allows simple implementation"
-                       " of TimeGate capabilities for a web resource having a "
-                       "version API. TimeGate is a generic server that sits "
-                       "between a Memento client and any type of resource "
-                       "version API to enable easy implementation Datetime "
-                       "negotiation for the resources. The server manages all "
-                       "the content negotiation logic, from request processing"
-                       ", best memento query and selection to response headers"
-                       " creation.",
+      long_description=read('README.md'),
       packages=[
           'timegate'
       ],
