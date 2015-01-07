@@ -24,6 +24,9 @@ Using the previous example, and supposing a TimeGate is running at `http://examp
 
 And that's it! With the TimeGate, date time negotiation is now possible for this resource.
 
+## How it works
+Read the [big picture](https://github.com/mementoweb/timegate/wiki/The-Big-Picture) to understand how it works.
+
 ## Getting Started
 Start by [reading the guide](https://github.com/mementoweb/timegate/wiki/Getting-Started) for comprehensive information about TimeGate.
 
