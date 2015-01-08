@@ -13,22 +13,28 @@ from werkzeug.contrib.cache import FileSystemCache, md5
 
 class Cache:
 
-    def __init__(self, path, tolerance, expiration, max_size, run_tests=True):
+    def __init__(self, path, tolerance, expiration, max_values, run_tests=True, max_file_size=0):
         """
         Constructor method
         :param path: The path of the cache database file.
         :param tolerance: The tolerance, in seconds to which a TimeMap is considered young enough to be used as is.
         :param expiration: How long, in seconds, the cache entries are stored every get will be a CACHE MISS.
-        :param max_size: The maximum size, in Bytes for the cache data folder
+        :param max_values: The maximum number of TimeMaps stored in cache before some are deleted
         :param run_tests: (Optional) Tests the cache at initialization.
+        :param max_file_size: (Optional) The maximum size (in Bytes) for a TimeMap cache value. When max_file_size=0, there is no limit to a cache value.
+        When max_file_size=X > 0, the cache will not store TimeMap that require more than X Bytes on disk.
         :return:
         """
 
+        # Parameters Check
+        if tolerance <= 0 or expiration <= 0 or max_values <= 0:
+            raise CacheError("Cannot create cache: all parameters must be > 0")
+
         self.tolerance = relativedelta(seconds=tolerance)
         self.path = path.rstrip('/')
-        self.max_file_size = 30e+5
-        self.max_values = int(max_size / self.max_file_size)
-
+        self.max_file_size = max(max_file_size, 0)
+        self.CHECK_SIZE = self.max_file_size > 0
+        self.max_values = max_values
         self.backend = FileSystemCache(path,
                                        threshold=self.max_values,
                                        default_timeout=expiration)
@@ -39,13 +45,13 @@ class Cache:
                 key = '1'
                 val = 1
                 self.backend.set(key, val)
-                assert self._check_size(key) > 0
+                assert (not self.CHECK_SIZE) or self._check_size(key) > 0
                 assert self.backend.get(key) == val
                 os.remove(self.path+'/' + md5(key).hexdigest())
             except Exception as e:
                 raise CacheError("Error testing cache: %s" % e.message)
 
-        logging.debug("Cache created. max_files = %d. Expiration = %d " % (self.max_values, expiration))
+        logging.debug("Cache created. max_files = %d. Expiration = %d. max_file_size = %d" % (self.max_values, expiration, self.max_file_size))
 
     def get_until(self, uri_r, date):
         """
@@ -118,7 +124,8 @@ class Cache:
         key = uri_r
         try:
             self.backend.set(key, val)
-            self._check_size(uri_r)
+            if self.CHECK_SIZE:
+                self._check_size(uri_r)
         except Exception as e:
             logging.error("Error setting cache value: %s" % e.message)
 

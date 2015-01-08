@@ -69,8 +69,8 @@ CACHE_USE = conf.getboolean('cache', 'cache_activated')
 CACHE_TOLERANCE = conf.getint('cache', 'cache_refresh_time')
 # Cache files paths
 CACHE_DIRECTORY = unicode.encode(conf.get('cache', 'cache_directory'), 'utf-8').rstrip('/')
-# Cache data file maximum size (in bytes)
-CACHE_MAX_SIZE = long(conf.getfloat('cache', 'cache_max_size') * 1e+6)
+# Maximum number of TimeMaps stored in cache
+CACHE_MAX_VALUES = conf.getint('cache', 'cache_max_values')
 # Cache files paths
 CACHE_FILE = CACHE_DIRECTORY #+ '/cache_data'
 # Cache expiration (space bound) in seconds

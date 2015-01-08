@@ -39,5 +39,3 @@ See the [wiki](https://github.com/mementoweb/timegate/wiki).
 
 ## License
 See the [LICENSE](https://github.com/mementoweb/timegate/blob/master/LICENSE) file.
-
-

@@ -6,7 +6,7 @@ import glob
 import logging
 import json
 
-from core.constants import (DATE_FORMAT, USE_TIMEMAPS, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE,  MOD_PATH, CACHE_MAX_SIZE, JSON_URI_PART,LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI)
+from core.constants import (DATE_FORMAT, USE_TIMEMAPS, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE,  MOD_PATH, CACHE_MAX_VALUES, JSON_URI_PART,LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI)
 from errors.timegateerrors import (TimegateError, URIRequestError)
 from core.cache import Cache
 from core.handler import parsed_request, Handler
@@ -76,9 +76,9 @@ except Exception as e:
 cache_activated = False
 if CACHE_USE:
     try:
-        cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_EXP, CACHE_MAX_SIZE)
+        cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_EXP, CACHE_MAX_VALUES)
         cache_activated = True
-        logging.info("Cached started: cache file: %s, cache refresh: %d seconds, max_size: %d Bytes" % (CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_SIZE))
+        logging.info("Cached started: cache file: %s, cache refresh: %d seconds, max_values: %d TimeMaps" % (CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_VALUES))
     except Exception as e:
         logging.error("Exception during cache loading: %s. Cache deactivated. Check permissions" % e.message)
 else:
