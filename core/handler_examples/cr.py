@@ -5,7 +5,7 @@ Croatian web archive proxy
 
 import re
 import urllib
-from core.handler import Handler
+from core.handler_baseclass import Handler
 import logging
 from errors.timegateerrors import HandlerError
 

@@ -9,7 +9,7 @@ from errors.timegateerrors import HandlerError
 
 from lxml import etree
 
-from core.handler import Handler
+from core.handler_baseclass import Handler
 
 __author__ = "Robert Sanderson, Yorick Chollet"
 

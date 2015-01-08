@@ -5,7 +5,7 @@ TODO: rewrite regex html parsing(?) with lxml
 import re
 import logging
 
-from core.handler import Handler
+from core.handler_baseclass import Handler
 from errors.timegateerrors import HandlerError
 
 __author__ = "aalsum, Yorick Chollet"

@@ -1,7 +1,7 @@
 import re
 import StringIO
 from lxml import etree
-from core.handler import Handler
+from core.handler_baseclass import Handler
 import logging
 
 __author__ = "Robert Sanderson, Yorick Chollet"

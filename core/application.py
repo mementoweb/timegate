@@ -6,19 +6,17 @@ import glob
 import logging
 import json
 
-from core.constants import (DATE_FORMAT, USE_TIMEMAPS, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE,  MOD_PATH, CACHE_MAX_VALUES, JSON_URI_PART,LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI)
+from core.constants import (DATE_FORMAT, USE_TIMEMAPS, CACHE_EXP, CACHE_FILE, CACHE_TOLERANCE,  HANDLER_MODULE, CACHE_MAX_VALUES, JSON_URI_PART, LINK_URI_PART, TIMEGATE_URI_PART, TIMEMAP_URI_PART, HTTP_STATUS, EXTENSIONS_PATH, LOG_FORMAT, CACHE_USE, STRICT_TIME, HOST, RESOURCE_TYPE, BASE_URI)
 from errors.timegateerrors import (TimegateError, URIRequestError)
 from core.cache import Cache
-from core.handler import parsed_request, Handler
+from core.handler_baseclass import parsed_request, Handler
 from core.timegate_utils import (nowstr, validate_req_datetime, parse_req_resource, best, date_str, now, get_complete_uri)
 
-logging.basicConfig(filemode='w', format=LOG_FORMAT, level=logging.DEBUG)
-logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
 
 def discover_handler(path):
     """
-    Discovers and loads python class in *path* that is a subclass of core.extension.Handler
+    Discovers and loads python class in *path* that is a subclass of core.handler.Handler
     :param path: The directory to search in
     :return: A handler object
     :raises Exception: When no such class is found, or when more than one is found
@@ -26,7 +24,7 @@ def discover_handler(path):
     # Handler Loading
     found_handlers = 0
     api_handler = None
-    # Finds the paths of every python modules in the extension folder
+    # Finds the paths of every python modules in the handler folder
     files = [filename[:-3] for filename in glob.glob(path+"*.py")]
     for module_path in files:
         # Imports the python module
@@ -50,10 +48,10 @@ def discover_handler(path):
 
 # Handler loading
 try:
-    if MOD_PATH:
-        dot_index = MOD_PATH.rfind('.')
-        mod = importlib.import_module(MOD_PATH[:dot_index])
-        handler_class = getattr(mod, MOD_PATH[dot_index+1:])
+    if HANDLER_MODULE:
+        dot_index = HANDLER_MODULE.rfind('.')
+        mod = importlib.import_module(HANDLER_MODULE[:dot_index])
+        handler_class = getattr(mod, HANDLER_MODULE[dot_index+1:])
         logging.info("Found handler %s" % handler_class)
         handler = handler_class()
     else:
@@ -78,7 +76,7 @@ if CACHE_USE:
     try:
         cache = Cache(CACHE_FILE, CACHE_TOLERANCE, CACHE_EXP, CACHE_MAX_VALUES)
         cache_activated = True
-        logging.info("Cached started: cache file: %s, cache refresh: %d seconds, max_values: %d TimeMaps" % (CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_VALUES))
+        logging.info("Cached started: cache directory: '%s', cache refresh: %d seconds, max_values: %d TimeMaps" % (CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_VALUES))
     except Exception as e:
         logging.error("Exception during cache loading: %s. Cache deactivated. Check permissions" % e.message)
 else:

@@ -1,6 +1,6 @@
 __author__ = 'Yorick Chollet'
 
-from core.handler import Handler
+from core.handler_baseclass import Handler
 from errors.timegateerrors import HandlerError
 from lxml import etree
 from StringIO import StringIO

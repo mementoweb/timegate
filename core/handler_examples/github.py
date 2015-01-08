@@ -3,7 +3,7 @@ import requests
 
 __author__ = 'Yorick Chollet'
 
-from core.handler import Handler
+from core.handler_baseclass import Handler
 from errors.timegateerrors import HandlerError
 
 import time

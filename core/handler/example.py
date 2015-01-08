@@ -4,7 +4,7 @@ Example handler
 __author__ = "Yorick Chollet"
 
 # Mandatory
-from core.handler import Handler
+from core.handler_baseclass import Handler
 
 # For get_memento() date parameter
 import datetime

@@ -2,7 +2,7 @@ import logging
 
 __author__ = 'Yorick Chollet'
 
-from core.handler import Handler
+from core.handler_baseclass import Handler
 from lxml import etree
 import StringIO
 from errors.timegateerrors import HandlerError

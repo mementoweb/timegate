@@ -6,7 +6,7 @@ from dateutil.relativedelta import relativedelta
 import logging
 
 from errors.timegateerrors import CacheError
-from handler import parsed_request
+from handler_baseclass import parsed_request
 
 from werkzeug.contrib.cache import FileSystemCache, md5
 
