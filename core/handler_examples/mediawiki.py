@@ -66,7 +66,6 @@ class MediaWikiHandler(Handler):
         return self.query(req_uri, params, title, api_base_uri, base_uri)
 
     def query(self, req_uri, req_params, title, api_base_uri, base_uri):
-        print api_base_uri, base_uri
 
         params = {
             'action': 'query',

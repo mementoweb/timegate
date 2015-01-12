@@ -2,7 +2,7 @@ import re
 
 __author__ = 'Yorick Chollet'
 
-from core.extensions_all.mediawiki import MediaWikiHandler
+from core.handler_examples.mediawiki import MediaWikiHandler
 
 
 class WikipediaHandler(MediaWikiHandler):
