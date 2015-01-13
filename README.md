@@ -9,7 +9,7 @@ The Memento framework enables datetime negotiation for web resources. Knowing th
 In order to support Memento, a web server must obviously have accessible archives of its online resources. And it must also have a piece of software that handles the datetime negotiation according to the Memento protocol for those resources.
 
 But in such datetime negotiation server, only a small proportion of the code is specific to the particular web resources it handles. The main part of logic will be very similar throughout many implementations.
-TimeGate isolates the core components and functionality. With it there's no need to implement, or to re-implement the same logic and algorithms over and over again.
+TimeGate isolates the core components and functionality. With it, there's no need to implement, or to re-implement the same logic and algorithms over and over again.
 Its architecture is designed to accept easy-to-code plugins to match any web resources.
 
 From now on, this documentation will refer to the web server where resources and archives are as the **web server** and to the Memento TimeGate datetime negotiation server as the **TimeGate**.
