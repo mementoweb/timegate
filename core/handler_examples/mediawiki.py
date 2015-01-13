@@ -137,7 +137,11 @@ class MediaWikiHandler(Handler):
         :return: [lxml_obj] parsed dom.
         """
 
-        page = self.request(uri)
+        try:
+            page = self.request(uri)
+        except HandlerError as he:
+            raise HandlerError(he.message, status=404)
+
         try:
             page_data = page.content
             if not html:

@@ -35,7 +35,7 @@ EXTENSIONS_PATH = 'core/handler/'
 # Logging
 LOG_FORMAT = '%(asctime)s | %(levelname)s| %(message)s'
 LOG_FILE = 'log.txt'
-logging.basicConfig(filemode='w', format=LOG_FORMAT, level=logging.INFO)
+logging.basicConfig(filemode='w', format=LOG_FORMAT, level=logging.DEBUG)
 logging.getLogger('uwsgi').setLevel(logging.WARNING)
 
 # TimeMap max size (in URIs) safeguard

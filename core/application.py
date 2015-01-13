@@ -13,7 +13,6 @@ from core.handler_baseclass import parsed_request, Handler
 from core.timegate_utils import (nowstr, validate_req_datetime, parse_req_resource, best, date_str, now, get_complete_uri)
 
 
-
 def discover_handler(path):
     """
     Discovers and loads python class in *path* that is a subclass of core.handler.Handler
@@ -110,7 +109,7 @@ def application(env, start_response):
 
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
     req_method = env.get('REQUEST_METHOD')
-    force_cache_refresh = env.get('HTTP_CACHE_CONTROL') == 'no-cache'
+    force_cache_refresh = env.get('HTTP_CACHE CONTROL') == 'no-cache'
     logging.info("Incoming request: %s %s, Accept-Datetime: %s , Force Refresh: %s" % (
                  req_method, req_path, req_datetime, force_cache_refresh))
 

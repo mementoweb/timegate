@@ -1,5 +1,6 @@
 # Memento TimeGate
 Make your web resources [Memento](http://www.mementoweb.org) compliant in a few easy steps.
+
 The Memento framework enables datetime negotiation for web resources. Knowing the URI of a Memento-compliant web resource, a user can select a date and see what it was like around that time.
 
 In order to support Memento, a web server must obviously have accessible archives of its online resources. And it must also have a piece of software that handles the datetime negotiation according to the Memento protocol for those resources.
