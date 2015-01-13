@@ -9,3 +9,5 @@ githubdir
 conf/serv_inis/*
 testuris
 cache/*
+config.ini
+.gitignore
