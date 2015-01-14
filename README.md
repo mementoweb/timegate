@@ -15,7 +15,7 @@ Its architecture is designed to accept easy-to-code plugins to match any web res
 From now on, this documentation will refer to the web server where resources and archives are as the **web server** and to the Memento TimeGate datetime negotiation server as the **TimeGate**.
 
 * Suppose you have a web resource accessible in a web server by some URI. We call the resource the **Original Resource** and refer to its URI as **URI-R**.
-* Suppose a web server has a snapshot of what this URI-R looked like in the past. We call such a snapshot a **Memento** and we refer to its URI as **URI-M**. There could be many snapshots of URI-R, taken at different moments in time, each with their distinct URI-Mi.
+* Suppose a web server has a snapshot of what this URI-R looked like in the past. We call such a snapshot a **Memento** and we refer to its URI as **URI-M**. There could be many snapshots of URI-R, taken at different moments in time, each with their distinct URI-Ms.
 The Mementos do not necessary need to be in the same web server as the Original Resources.
 
 
