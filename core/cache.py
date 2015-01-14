@@ -1,12 +1,15 @@
 import os
+
 from core import timegate_utils
+
+
 __author__ = 'Yorick Chollet'
 
 from dateutil.relativedelta import relativedelta
 import logging
 
 from errors.timegateerrors import CacheError
-from handler_baseclass import parsed_request
+from core.handler_baseclass import parsed_request
 
 from werkzeug.contrib.cache import FileSystemCache, md5
 

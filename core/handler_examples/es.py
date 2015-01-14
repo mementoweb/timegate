@@ -2,11 +2,13 @@
 Memento proxy for Estonia Web Archive
 TODO: rewrite regex html parsing(?) with lxml
 """
-import re
 import logging
+
+import re
 
 from core.handler_baseclass import Handler
 from errors.timegateerrors import HandlerError
+
 
 __author__ = "aalsum, Yorick Chollet"
 

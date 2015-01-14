@@ -3,13 +3,15 @@ Canadian archive proxy.
 """
 __author__ = "Robert Sanderson, Yorick Chollet"
 
-from core.handler_baseclass import Handler
-
 import logging
-from lxml import etree
 import StringIO
-from errors.timegateerrors import HandlerError
+
+from lxml import etree
 import re
+
+from core.handler_baseclass import Handler
+from errors.timegateerrors import HandlerError
+
 
 class CanHandler(Handler):
 

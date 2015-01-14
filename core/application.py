@@ -416,9 +416,10 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
                 logging.debug('Using multiple-request mode.')
                 mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
                 first = mementos[0]
-                last = mementos[-1]  # The last is assured to be a fresh value
+                last = mementos[-1]
         else:
-            first = mementos[0]  # The cached first will never change, not the last
+            first = mementos[0]
+            last = mementos[-1]
     else:
         mementos = parsed_request(handler.get_memento, uri_r, accept_datetime)
 

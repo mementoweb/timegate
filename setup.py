@@ -19,7 +19,7 @@ setup(name='timegate',
       download_url='https://github.com/mementoweb/timegate/releases',
       description="A Generic Memento TimeGate",
       long_description=read('README.md'),
-      packages=find_packages(exclude=['test*']),
+      packages=find_packages(exclude=['doc.*']),
       keywords='timegate memento uwsgi python',
       license='http://mementoweb.github.io/SiteStory/license.html',
       install_requires=[
@@ -30,10 +30,6 @@ setup(name='timegate',
           'werkzeug>=0.9.6'
 
       ],
-      tests_require=[
-          'WebTest>=2.0.14'
-      ],
-      test_suite='test',
       include_package_data=True,
       zip_safe=False
       )

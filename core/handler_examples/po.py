@@ -1,11 +1,14 @@
 # Memento proxy for Portuguese Web Archive arquivo.pt
 
 import logging
-from lxml import etree
 import StringIO
+
+from lxml import etree
+
 from errors.timegateerrors import HandlerError
 from core.handler_baseclass import Handler
 from core.timegate_utils import get_uri_representations
+
 
 __author__ = "aalsum, Yorick Chollet"
 

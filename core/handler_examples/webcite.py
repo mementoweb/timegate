@@ -5,11 +5,12 @@ WebCitation proxy
 import StringIO
 import urllib2
 import cookielib
-from errors.timegateerrors import HandlerError
 
 from lxml import etree
 
+from errors.timegateerrors import HandlerError
 from core.handler_baseclass import Handler
+
 
 __author__ = "Robert Sanderson, Yorick Chollet"
 

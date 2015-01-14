@@ -1,10 +1,12 @@
-from core.handler_baseclass import Handler
-
 import logging
-from lxml import etree
 import StringIO
+
+from lxml import etree
+
+from core.handler_baseclass import Handler
 from errors.timegateerrors import HandlerError
 from core.timegate_utils import now
+
 
 __author__ = "Robert Sanderson, Yorick Chollet"
 

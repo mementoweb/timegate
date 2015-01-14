@@ -6,8 +6,8 @@ __pycache__
 log.txt
 cache_*
 githubdir
-conf/serv_inis/*
+conf/amazon_config/*
 testuris
+cache*
 cache/*
-config.ini
 .gitignore

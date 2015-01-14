@@ -1,11 +1,13 @@
 __author__ = 'Yorick Chollet'
 
-from core.handler_baseclass import Handler
-from errors.timegateerrors import HandlerError
-from lxml import etree
 from StringIO import StringIO
 import logging
+
+from lxml import etree
 import re
+
+from core.handler_baseclass import Handler
+from errors.timegateerrors import HandlerError
 
 
 class ArxivHandler(Handler):

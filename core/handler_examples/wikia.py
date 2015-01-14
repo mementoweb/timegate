@@ -1,17 +1,18 @@
 from urlparse import urlparse
 import time
+import logging
+import StringIO
+
 from datetime import datetime
 from datetime import timedelta
 from dateutil import parser as dateparser
 from dateutil.tz import tzutc
-
-import logging
 from lxml import etree
-import StringIO
+
 from errors.timegateerrors import HandlerError
 from core.handler_baseclass import Handler
-
 from core.timegate_utils import date_str
+
 
 __author__ = "Robert Sanderson, Harihar Shankar, Yorick Chollet"
 

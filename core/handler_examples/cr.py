@@ -2,12 +2,14 @@
 Croatian web archive proxy
 """
 
+import urllib
+import logging
 
 import re
-import urllib
+
 from core.handler_baseclass import Handler
-import logging
 from errors.timegateerrors import HandlerError
+
 
 __author__ = "aalsum, Yorick Chollet"
 
