@@ -125,7 +125,7 @@ class GitHubHandler(Handler):
             'path': str(path),
             'sha': str(branch)
         }
-        auth = ('MementoTimegate', 'LANLTimeGate14')
+        aut_pair = ('MementoTimegate', 'LANLTimeGate14')
         cont = apibase  # The first continue is the beginning
 
         # Does sequential queries to get all commits of the particular resource
@@ -134,7 +134,7 @@ class GitHubHandler(Handler):
         while cont is not None:
             if int(time.time()) > tmax:
                 raise HandlerError("Resource too big to be served. GitHub Handler TimeOut (timeout: %d seconds)" % MAX_TIME, 502)
-            req = self.request(cont, params=params, auth=auth)
+            req = self.request(cont, params=params, auth=aut_pair)
             cont = None
             if not req:
                 # status code different than 2XX

@@ -2,6 +2,7 @@ __author__ = 'Yorick Chollet'
 import os
 try:
     from setuptools import setup
+    from setuptools import find_packages
 except ImportError:
     from distutils.core import setup
 
@@ -11,16 +12,14 @@ def read(fname):
 
 
 setup(name='timegate',
-      version='0.1.0',
+      version='0.1.1',
       author='Yorick Chollet',
       author_email='yorick.chollet@gmail.com',
       url='https://github.com/mementoweb/timegate',
       download_url='https://github.com/mementoweb/timegate/releases',
       description="A Generic Memento TimeGate",
       long_description=read('README.md'),
-      packages=[
-          'timegate'
-      ],
+      packages=find_packages(exclude=['test*']),
       keywords='timegate memento uwsgi python',
       license='http://mementoweb.github.io/SiteStory/license.html',
       install_requires=[
@@ -31,14 +30,10 @@ setup(name='timegate',
           'werkzeug>=0.9.6'
 
       ],
-      # tests_require=[
-      #     'WebTest>=2.0.14'
-      # ],
-      # test_suite='test',
-      scripts=['bin/timegate'],
+      tests_require=[
+          'WebTest>=2.0.14'
+      ],
+      test_suite='test',
       include_package_data=True,
-      zip_safe=False,
-      data_files=[('/etc/timegate', ['conf/timegate.ini'])
-                  # ('db', ['db/subscriptions.pk']), TODO cache
-                  ]
+      zip_safe=False
       )
