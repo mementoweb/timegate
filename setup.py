@@ -12,7 +12,7 @@ def read(fname):
 
 
 setup(name='timegate',
-      version='0.1.1',
+      version='0.2.0',
       author='Yorick Chollet',
       author_email='yorick.chollet@gmail.com',
       url='https://github.com/mementoweb/timegate',
