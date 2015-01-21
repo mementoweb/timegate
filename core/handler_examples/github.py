@@ -36,6 +36,9 @@ class GitHubHandler(Handler):
     def get_all_mementos(self, uri):
         MAX_TIME = 120 #seconds
 
+        if uri.startswith('http://'):
+            uri = uri.replace('http://', 'https://', 1)
+
         # URI deconstruction
         match = self.rex.match(uri)
         if not bool(match):

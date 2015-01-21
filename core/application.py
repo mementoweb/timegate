@@ -412,6 +412,11 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
             if HAS_TIMEGATE:
                 logging.debug('Using single-request mode.')
                 mementos = parsed_request(handler.get_memento, uri_r, accept_datetime)
+                # There is more than one memento returned by get_memento. Assume they are the first/last
+                if len(mementos) > 1:
+                    first = mementos[0]
+                    if len(mementos) > 2:
+                        last = mementos[-1]
             else:
                 logging.debug('Using multiple-request mode.')
                 mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
@@ -422,6 +427,11 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
             last = mementos[-1]
     else:
         mementos = parsed_request(handler.get_memento, uri_r, accept_datetime)
+        # There is more than one memento returned by get_memento. Assume they are the first/last
+        if len(mementos) > 1:
+            first = mementos[0]
+            if len(mementos) > 2:
+                last = mementos[-1]
 
     # If the handler returned several Mementos, take the closest
     memento = best(mementos, accept_datetime, RESOURCE_TYPE)
