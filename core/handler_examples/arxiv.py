@@ -25,6 +25,8 @@ class ArxivHandler(Handler):
         try:
             # Extract the resource ID
             match = self.rex.match(uri_r)
+            if not match:
+                raise HandlerError("URI does not match a valid resource.", 404)
             parts = match.groups()
             base = parts[0]
             type = parts[1]
@@ -53,6 +55,9 @@ class ArxivHandler(Handler):
 
             return map(mapper, versions)
 
+        except HandlerError as he:
+            raise he
+
         except Exception as e:
-            logging.debug('Arxiv handler exception: %s returning 404' % e)
-            raise HandlerError('Resource Not Found on arXiv server', 404)
+            logging.error('Arxiv handler exception: %s returning 404' % e)
+            return
