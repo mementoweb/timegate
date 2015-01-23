@@ -66,7 +66,7 @@ try:
         raise NotImplementedError("NotImplementedError: Handler has neither `get_memento` nor `get_all_mementos` method.")
 
 except Exception as e:
-    logging.critical("Exception during handler loading: %s" % e.message)
+    logging.critical("Exception during handler loading: %s" % e)
     raise e
 
 # Cache loading
@@ -77,7 +77,7 @@ if CACHE_USE:
         cache_activated = True
         logging.info("Cached started: cache directory: '%s', cache refresh: %d seconds, max_values: %d TimeMaps" % (CACHE_FILE, CACHE_TOLERANCE, CACHE_MAX_VALUES))
     except Exception as e:
-        logging.error("Exception during cache loading: %s. Cache deactivated. Check permissions" % e.message)
+        logging.error("Exception during cache loading: %s. Cache deactivated. Check permissions" % e)
 else:
     logging.info("Cache not used.")
 
@@ -132,10 +132,10 @@ def application(env, start_response):
                 raise TimegateError("Incomplete timegate request. \n"
                                     "    Syntax: GET /timegate/:resource", 400)
         except TimegateError as e:
-            logging.info("End of timegate request due to TimegateError : %s" % e.message)
-            return error_response(e.status, start_response, e.message)
+            logging.info("End of timegate request due to TimegateError : %s" % e)
+            return error_response(e.status, start_response, e)
         except Exception as e:
-            logging.critical("End of timegate request due to an unhandled Exception : %s" % e.message)
+            logging.critical("End of timegate request due to an unhandled Exception : %s" % e)
             return error_response(503, start_response)
 
     # Serving TimeMap Request
@@ -153,10 +153,10 @@ def application(env, start_response):
                 raise TimegateError("Incomplete timemap request. \n"
                                     "    Syntax: GET /timemap/:type/:resource", 400)
         except TimegateError as e:
-            logging.info("End of timemap request due to TimegateError : %s" % e.message)
-            return error_response(e.status, start_response, e.message)
+            logging.info("End of timemap request due to TimegateError : %s" % e)
+            return error_response(e.status, start_response, e)
         except Exception as e:
-            logging.critical("End of timemap request due to an unhandled Exception : %s" % e.message)
+            logging.critical("End of timemap request due to an unhandled Exception : %s" % e)
             return error_response(503, start_response)
 
     # Unknown Service Request

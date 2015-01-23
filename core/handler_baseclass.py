@@ -42,7 +42,7 @@ class Handler:
         try:
             req = requests.get(uri, timeout=timeout, **kwargs)
         except Exception as e:
-            logging.error("Cannot request server (%s): %s" % (uri, e.message))
+            logging.error("Cannot request server (%s): %s" % (uri, e))
             raise HandlerError("Cannot request version server.", 502)
 
         if req is None:
@@ -68,10 +68,10 @@ def parsed_request(handler_function, *args, **kwargs):
     try:
         handler_response = handler_function(*args, **kwargs)
     except HandlerError as he:
-        logging.info("Handler raised HandlerError %s" % he.message)
+        logging.info("Handler raised HandlerError %s" % he)
         raise he  # HandlerErrors have return data.
     except Exception as e:
-        logging.error("Handler raised exception %s" % e.message)
+        logging.error("Handler raised exception %s" % e)
         raise HandlerError("Error in Handler", 503)
 
     # Input check

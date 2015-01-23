@@ -30,7 +30,7 @@ class EsHandler(Handler):
             resp = self.request(uri)
             data = resp.content
         except Exception as e:
-            logging.error("Cannot request URI: %s" % e.message)
+            logging.error("Cannot request URI: %s" % e)
             raise HandlerError("Cannot request URI", 404)
 
         changes = []

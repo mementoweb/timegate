@@ -30,7 +30,7 @@ def validate_req_datetime(datestr, strict=True):
         return date.replace(tzinfo=tzutc())
     except Exception as e:
         raise DateTimeError("Error parsing 'Accept-Datetime: %s' \n"
-                            "Message: %s" % (datestr, e.message))
+                            "Message: %s" % (datestr, e))
 
 
 def get_complete_uri(resource):
@@ -64,7 +64,7 @@ def parse_req_resource(pathstr):
         return uri
     except Exception as e:
         raise URIRequestError("Error: Cannot parse requested path '%s' \n"
-                              "message: %s" % (pathstr, e.message))
+                              "message: %s" % (pathstr, e))
 
 
 def validate_uristr(uristr):
@@ -77,7 +77,7 @@ def validate_uristr(uristr):
         return str(urlparse(uristr).geturl())
     except Exception as e:
         raise Exception("Error: cannot parse uri string %s \n"
-                        "Message: %s" % (uristr, e.message))
+                        "Message: %s" % (uristr, e))
 
 
 def validate_date(datestr, strict=False):

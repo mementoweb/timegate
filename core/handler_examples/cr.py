@@ -32,7 +32,7 @@ class CrHandler(Handler):
         try:
             jsonobj = self.request(uri).json()
         except Exception as e:
-            logging.error("Cannot request API or parse json response: "+e.message)
+            logging.error("Cannot request API or parse json response: "+e)
             raise HandlerError("Cannot get API response.", 404)
 
         changes = []
@@ -46,7 +46,7 @@ class CrHandler(Handler):
         try:
             data = self.request(tmuri).content
         except Exception as e:
-            logging.error("Error requerying API: "+e.message)
+            logging.error("Error requerying API: "+e)
             raise HandlerError("Cannot get API response.", 404)
 
         uriRegex = re.compile(r'<tr><td>[\d]*\.</td>.*</tr>')

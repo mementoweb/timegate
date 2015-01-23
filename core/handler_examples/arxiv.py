@@ -54,5 +54,5 @@ class ArxivHandler(Handler):
             return map(mapper, versions)
 
         except Exception as e:
-            logging.debug('Arxiv handler exception: %s returning 404' % e.message)
+            logging.debug('Arxiv handler exception: %s returning 404' % e)
             raise HandlerError('Resource Not Found on arXiv server', 404)

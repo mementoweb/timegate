@@ -60,7 +60,7 @@ class LocHandler(Handler):
                 parser = etree.HTMLParser(recover=True)
                 dom = etree.parse(StringIO.StringIO(data), parser)
             except Exception as e:
-                logging.error("Exception parsing data in loc handler: %s" % e.message)
+                logging.error("Exception parsing data in loc handler: %s" % e)
                 continue
 
             alist = dom.xpath('//a')

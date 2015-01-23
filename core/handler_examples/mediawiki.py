@@ -58,7 +58,7 @@ class MediaWikiHandler(Handler):
         except HandlerError as he:
             raise he
         except Exception as e:
-            logging.error("MediaWikiHandler: querying and parsing page for title/api %s. handler will return empty response" % e.message)
+            logging.error("MediaWikiHandler: querying and parsing page for title/api %s. handler will return empty response" % e)
             return None
 
         base_uri = api_base_uri.replace("api.php", "index.php")
@@ -140,7 +140,7 @@ class MediaWikiHandler(Handler):
         try:
             page = self.request(uri)
         except HandlerError as he:
-            raise HandlerError(he.message, status=404)
+            raise HandlerError(he, status=404)
 
         try:
             page_data = page.content

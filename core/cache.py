@@ -52,7 +52,7 @@ class Cache:
                 assert self.backend.get(key) == val
                 os.remove(self.path+'/' + md5(key).hexdigest())
             except Exception as e:
-                raise CacheError("Error testing cache: %s" % e.message)
+                raise CacheError("Error testing cache: %s" % e)
 
         logging.debug("Cache created. max_files = %d. Expiration = %d. max_file_size = %d" % (self.max_values, expiration, self.max_file_size))
 
@@ -72,7 +72,7 @@ class Cache:
         try:
             val = self.backend.get(key)
         except Exception as e:
-            logging.error("Exception loading cache content: %s" % e.message)
+            logging.error("Exception loading cache content: %s" % e)
             return None
 
         if val:
@@ -130,7 +130,7 @@ class Cache:
             if self.CHECK_SIZE:
                 self._check_size(uri_r)
         except Exception as e:
-            logging.error("Error setting cache value: %s" % e.message)
+            logging.error("Error setting cache value: %s" % e)
 
     def _check_size(self, key, delete=True):
         """
@@ -152,6 +152,6 @@ class Cache:
                 logging.warning(message % (size, self.max_file_size, key))
             return size
         except Exception as e:
-            logging.error("Exception checking cache value size for TimeMap of %s Exception: %s" % (key, e.message))
+            logging.error("Exception checking cache value size for TimeMap of %s Exception: %s" % (key, e))
             return 0
 
