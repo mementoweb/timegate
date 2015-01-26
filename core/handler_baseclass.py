@@ -10,6 +10,7 @@ import requests
 from errors.timegateerrors import HandlerError
 from core.constants import TM_MAX_SIZE, API_TIME_OUT
 
+from urllib2 import quote
 
 class Handler:
 
@@ -26,6 +27,7 @@ class Handler:
         :param resource: The resource to get
         :param timeout: The HTTP Timeout for a single request
         :param kwargs: The keywords arguments to pass to the request method (`params`).
+        These keywords will have their special character escaped using %-encoding. Do not pass already-encoded chars
         :return: A requests response object
         :raises HandlerError: if the requests fails to access the API
         """
@@ -34,7 +36,7 @@ class Handler:
         # Request logging with params
         try:
             logging.info("Sending request for %s?%s" % (
-                uri, '&'.join(map(lambda(k, v): '%s=%s' % (k, v), kwargs['params'].items()))))
+                uri, '&'.join(map(lambda(k, v): '%s=%s' % (quote(k), quote(v)), kwargs['params'].items()))))
         except Exception:
             # Key errors on 'params'
             logging.info("Sending request for %s" % uri)

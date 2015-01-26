@@ -7,6 +7,7 @@ from lxml import etree
 import StringIO
 from errors.timegateerrors import HandlerError
 import urlparse
+import urllib2
 
 from core.timegate_utils import date_str
 
@@ -54,6 +55,8 @@ class MediaWikiHandler(Handler):
                 raise HandlerError("Cannot find Title", 404)
             if not api_base_uri:
                 raise HandlerError("Cannot find mediawiki API on page", 404)
+            else:
+                title = urllib2.unquote(title)
 
         except HandlerError as he:
             raise he
@@ -92,7 +95,8 @@ class MediaWikiHandler(Handler):
             if 'error' in result:
                 raise HandlerError(result['error'])
             if 'warnings' in result:
-                logging.warn(result['warnings'])
+                # logging.warn(result['warnings'])
+                pass
             try:
                 # The request was successful
                 pid = result['query']['pageids'][0]  # the JSON key of the page (only one)
@@ -119,12 +123,12 @@ class MediaWikiHandler(Handler):
         # Processing list
         def f(rev):
             rev_uri = base_uri + '?title=%s&oldid=%d' % (
-                title, rev['revid'])
+                urllib2.quote(title), rev['revid'])
             dt = rev['timestamp']
             return (rev_uri, dt)
 
 
-        logging.debug("Returning API results of size %d" % len(queries_results))
+        # logging.debug("Returning API results of size %d" % len(queries_results))
         return map(f, queries_results)
 
     def get_xml(self, uri, html=False):
