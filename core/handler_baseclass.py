@@ -36,7 +36,7 @@ class Handler:
         # Request logging with params
         try:
             logging.info("Sending request for %s?%s" % (
-                uri, '&'.join(map(lambda(k, v): '%s=%s' % (quote(k), quote(v)), kwargs['params'].items()))))
+                uri, '&'.join(map(lambda(k, v): '%s=%s' % (quote(str(k)), quote(str(v))), kwargs['params'].items()))))
         except Exception:
             # Key errors on 'params'
             logging.info("Sending request for %s" % uri)
