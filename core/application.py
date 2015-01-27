@@ -109,7 +109,8 @@ def application(env, start_response):
 
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
     req_method = env.get('REQUEST_METHOD')
-    force_cache_refresh = env.get('HTTP_CACHE CONTROL') == 'no-cache'
+    force_cache_refresh = (env.get('HTTP_CACHE CONTROL') == 'no-cache' or
+                           env.get('HTTP_CACHE_CONTROL') == 'no-cache')
     logging.info("Incoming request: %s %s, Accept-Datetime: %s , Force Refresh: %s" % (
                  req_method, req_path, req_datetime, force_cache_refresh))
 
