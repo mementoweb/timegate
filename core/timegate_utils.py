@@ -134,6 +134,7 @@ def best(timemap, accept_datetime, timemap_type, sorted=True):
 def closest(timemap, accept_datetime, sorted=True):
     """
     Finds the chronologically closest memento
+    Details of the requirements at http://www.mementoweb.org/guide/rfc/#SpecialCases, point 4.5.3
     :param timemap: A sorted Timemap
     :param accept_datetime: the time object
     :param sorted: boolean to indicate if the list is sorted or not.
@@ -147,7 +148,7 @@ def closest(timemap, accept_datetime, sorted=True):
 
     for (url, dt) in timemap:
         diff = abs(accept_datetime - dt)
-        if diff < delta:
+        if diff <= delta:  # Not < beceause there can be several with the same datetime.
             memento_uri = url
             memento_dt = dt
             delta = diff
@@ -161,11 +162,13 @@ def closest(timemap, accept_datetime, sorted=True):
 
 def closest_before(timemap, accept_datetime, sorted=True):
     """
-    Finds the closest memento in the past of a datetime
+    Finds the closest memento in the past of a datetime.
+    Details of the requirements at http://www.mementoweb.org/guide/rfc/#SpecialCases, point 4.5.3
+
     :param timemap: A sorted Timemap
     :param accept_datetime: the time object for the maximum datetime requested
     :param sorted: boolean to indicate if the list is sorted or not.
-    :return: The uri_m string of the closest memento
+    :return: The uri_m string of the closest memento.
     """
 
     delta = timedelta.max
@@ -181,7 +184,7 @@ def closest_before(timemap, accept_datetime, sorted=True):
                 if prev_uri is not None:
                     return (prev_uri, prev_dt) # We passed 'accept-datetime'
                 else:
-                    return (url, dt)  # The first of the list (even if it is after accept datetime)
+                    return (url, dt)  # The first of the sorted list is already after the accept datetime
             prev_uri = url
             prev_dt = dt
         elif diff < delta:

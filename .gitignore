@@ -8,6 +8,5 @@ cache_*
 githubdir
 testuris
 cache/*
-.gitignore
 ml_test.py
 conf/config.ini

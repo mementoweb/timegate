@@ -463,9 +463,9 @@ def timemap(req_uri, req_mime, start_response, force_cache_refresh=False):
         if mementos is None:
             mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
     elif not USE_TIMEMAPS:
-        raise TimegateError("TimeMaps requests deactivated.", 400)
+        raise TimegateError("TimeMap requests are not supported.", 403)
     else:
-        raise TimegateError("Cannot serve TimeMaps.", 400)
+        raise TimegateError("TimeMap requests are not supported", 403)
 
     # Generates the TimeMap response body and Headers
     if req_mime.startswith(JSON_URI_PART):

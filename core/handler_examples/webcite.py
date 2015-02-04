@@ -10,7 +10,7 @@ from lxml import etree
 
 from errors.timegateerrors import HandlerError
 from core.handler_baseclass import Handler
-
+import logging
 
 __author__ = "Robert Sanderson, Yorick Chollet"
 
@@ -34,7 +34,8 @@ class WebCiteHandler(Handler):
         elif not requri.endswith('html') and not requri.endswith('htm'):
             return []
         else:
-            wcurl = 'http://webcitation.org/query.php?url=' + requri
+            return self.get_from_xml(requri)  # Cleaner but much slower
+            # wcurl = 'http://webcitation.org/query.php?url=' + requri  # Fast screen scraping
 
         txheaders = {}
 
@@ -68,3 +69,24 @@ class WebCiteHandler(Handler):
             changes.append(('http://webcitation.org/query?id=' + fid, date))
 
         return changes
+
+    def get_from_xml(self, requri):
+        api_request = 'http://webcitation.org/query.php?returnxml=1&url='+requri
+        xml = self.request(api_request, timeout=120)
+
+        try:
+            parser = etree.XMLParser(recover=True)  # Parses bad XML
+            dom = etree.parse(StringIO.StringIO(str(xml.text)), parser)
+        except Exception as e:
+            logging.error('Cannot parse XML: ' + str(e))
+            raise HandlerError('Cannot parse XML', 404)
+
+        results = []
+        succes = dom.xpath("//result[@status='success']")
+        for s in succes:
+            url = s.find('webcite_url').text
+            date = s.find('timestamp').text
+
+            results.append((url, date))
+
+        return results

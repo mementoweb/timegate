@@ -7,6 +7,7 @@ HTTP_STATUS = {
     200: "200 OK",
     302: "302 Found",
     400: "400 Bad Request",
+    403: "403 Forbidden",
     404: "404 Not Found",
     405: "405 Method Not Allowed",
     416: '416 Requested Range Not Satisfiable',

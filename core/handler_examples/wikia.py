@@ -44,10 +44,16 @@ class WikiaHandler(Handler):
         if host.find('.wikia.com') == -1 and not host in self.hosts:
             return
 
-        (pref, title) = upath.rsplit('/', 1)
-        if pref:
-            # look for /wiki
-            pref = pref.replace('/wiki', '')
+        exploded_path = upath.rsplit('/', 1)
+
+        if len(exploded_path) > 1:
+            (pref, title) = upath.rsplit('/', 1)
+            if pref:
+                # look for /wiki
+                pref = pref.replace('/wiki', '')
+        else:
+            raise HandlerError("No article title found in requested URI.", 404)
+
         
         changes = []
         defaultProtocol = "http://"
