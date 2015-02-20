@@ -265,7 +265,7 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
         HOST, TIMEGATE_URI_PART, resource)
     link_self = '<%s/%s/%s/%s>; rel="self"; type="application/link-format"' % (
         HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
-    json_self = '<%s/%s/%s/%s>; rel="self"; type="application/json"' % (
+    json_self = '<%s/%s/%s/%s>; rel="timemap"; type="application/json"' % (
         HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
 
     # Browse through Mementos to generate the TimeMap links list

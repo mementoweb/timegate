@@ -31,8 +31,6 @@ class WebCiteHandler(Handler):
             wcurl = 'http://webcitation.org/5jq24MRo3'
         elif requri == 'http://odusource.cs.odu.edu/pics/picoftheday.png':
             wcurl = 'http://webcitation.org/5k9j4oXPw'
-        elif not requri.endswith('html') and not requri.endswith('htm'):
-            return []
         else:
             return self.get_from_xml(requri)  # Cleaner but much slower
             # wcurl = 'http://webcitation.org/query.php?url=' + requri  # Fast screen scraping
