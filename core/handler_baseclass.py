@@ -91,11 +91,18 @@ def parsed_request(handler_function, *args, **kwargs):
         raise HandlerError('Handler response too big and unprocessable.', 502)
 
     valid_response = []
+    # new_uri_r = None
     try:
         for (url, date) in handler_response:
             valid_urlstr = timegate_utils.validate_uristr(url)
+            # if not date:
+            #     new_uri_r = valid_urlstr
+            #     continue
+            #else:
             valid_date = timegate_utils.validate_date(date, strict=False)
+
             valid_response.append((valid_urlstr, valid_date))
+
     except Exception as e:
         logging.error('Bad response from Handler:'
                         'response must be either None, tuple(url, date) or'
@@ -111,3 +118,4 @@ def parsed_request(handler_function, *args, **kwargs):
 
 
     return sorted_list
+    # return sorted_list, new_uri_r

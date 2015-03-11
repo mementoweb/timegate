@@ -133,10 +133,11 @@ def best(timemap, accept_datetime, timemap_type, sorted=True):
 
 def closest(timemap, accept_datetime, sorted=True):
     """
-    Finds the chronologically closest memento
+    Finds the absolute closest memento chronologically to a datetime.
     Details of the requirements at http://www.mementoweb.org/guide/rfc/#SpecialCases, point 4.5.3
+
     :param timemap: A sorted Timemap
-    :param accept_datetime: the time object
+    :param accept_datetime: the time object for which the best memento must be found
     :param sorted: boolean to indicate if the list is sorted or not.
     :return:
     """
@@ -162,11 +163,11 @@ def closest(timemap, accept_datetime, sorted=True):
 
 def closest_before(timemap, accept_datetime, sorted=True):
     """
-    Finds the closest memento in the past of a datetime.
+    Finds the closest memento in the before a datetime.
     Details of the requirements at http://www.mementoweb.org/guide/rfc/#SpecialCases, point 4.5.3
 
     :param timemap: A sorted Timemap
-    :param accept_datetime: the time object for the maximum datetime requested
+    :param accept_datetime: the time object for which the best memento must be found
     :param sorted: boolean to indicate if the list is sorted or not.
     :return: The uri_m string of the closest memento.
     """
@@ -200,6 +201,34 @@ def closest_before(timemap, accept_datetime, sorted=True):
         return (prev_uri, prev_dt)
     else:
         return (next_uri, next_dt)  # The first after accept datetime
+
+
+def closest_binary(timemap, accept_datetime):
+    """
+    Finds the chronologically closest memento using binary search in a sorted list.
+    Complexity O(log(n)) instead of O(n)
+    Details of the requirements at http://www.mementoweb.org/guide/rfc/#SpecialCases, point 4.5.3
+    :param timemap: A sorted Timemap
+    :param accept_datetime: the time object for which the best memento must be found
+    :return: The uri_m string of the closest memento.
+    """
+    # TODO implement
+    pass
+
+
+def closest_before_binary(timemap, accept_datetime):
+    """
+    Finds the closest memento in the past of a datetime using binary search in a sorted list.
+    Complexity O(log(n)) instead of O(n)
+    Details of the requirements at http://www.mementoweb.org/guide/rfc/#SpecialCases, point 4.5.3
+
+    :param timemap: A sorted Timemap
+    :param accept_datetime: the time object for which the best memento must be found
+    :return: The uri_m string of the closest memento.
+    """
+    # TODO implement
+    
+    pass
 
 
 def now():

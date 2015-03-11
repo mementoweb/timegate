@@ -413,6 +413,9 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
             if HAS_TIMEGATE:
                 logging.debug('Using single-request mode.')
                 mementos = parsed_request(handler.get_memento, uri_r, accept_datetime)
+                # mementos, new_uri = parsed_request(handler.get_memento, uri_r, accept_datetime)
+                # if new_uri:
+                    # uri_r = new_uri
                 # There is more than one memento returned by get_memento. Assume they are the first/last
                 if len(mementos) > 1:
                     first = mementos[0]
@@ -421,6 +424,9 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
             else:
                 logging.debug('Using multiple-request mode.')
                 mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
+                # mementos, new_uri = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
+                # if new_uri:
+                    # uri_r = new_uri
                 first = mementos[0]
                 last = mementos[-1]
         else:
@@ -428,6 +434,10 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
             last = mementos[-1]
     else:
         mementos = parsed_request(handler.get_memento, uri_r, accept_datetime)
+        # mementos, new_uri = parsed_request(handler.get_memento, uri_r, accept_datetime)
+        # if new_uri:
+            # uri_r = new_uri
+
         # There is more than one memento returned by get_memento. Assume they are the first/last
         if len(mementos) > 1:
             first = mementos[0]
@@ -462,6 +472,9 @@ def timemap(req_uri, req_mime, start_response, force_cache_refresh=False):
             mementos = get_cached_timemap(uri_r)
         if mementos is None:
             mementos = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
+            # mementos, new_uri = get_and_cache(uri_r, handler.get_all_mementos, uri_r)
+            # if new_uri:
+                # uri_r = new_uri
     elif not USE_TIMEMAPS:
         raise TimegateError("TimeMap requests are not supported.", 403)
     else:

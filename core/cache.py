@@ -109,6 +109,11 @@ class Cache:
         :return: The fresh TimeMap
         """
         timemap = parsed_request(getter, *args, **kwargs)
+        # timemap,new_uri = parsed_request(getter, *args, **kwargs)
+        # if new_uri:
+            # uri_r = new_uri
+
+
         # Creates or refreshes the new timemap for that URI-R
         self._set(uri_r, timemap)
         return timemap
