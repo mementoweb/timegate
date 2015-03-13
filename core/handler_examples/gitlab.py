@@ -10,6 +10,7 @@ import time
 
 ACCEPTABLE_RESOURCE = """Acceptable resources URI: repositories (/:user/:repo), folders (/:user/:repo/tree/:branch/:path), files (/:user/:repo/blob/:branch/:path) and raw files (/:user/:repo/:branch/:path)"""
 
+# TODO: wiki pages (https://gitlab.ub.uni-bielefeld.de/opac/cdrom-opac/wikis/home)
 
 class GitLabHandler(Handler):
 
@@ -22,7 +23,7 @@ class GitLabHandler(Handler):
         self.api = 'https://gitlab.ub.uni-bielefeld.de/api/v3'  # TODO: move to config file
         self.apikey = 'VqeqaShAw4GWVc3dp7--'  # TODO: move to config file
 
-        # Precompiles regular expressions
+        # Precompiles regular expressions  ## TODO: generalize for URLs with numeric project ID instead of user/repo!!!
         self.rex = re.compile("""  # The format of URI-Rs
                               (https://)  # protocol
                               ([^/]+)/  # base
@@ -35,9 +36,6 @@ class GitLabHandler(Handler):
 
     def get_all_mementos(self, uri):
         MAX_TIME = 120 #seconds
-
-        if uri.startswith('http://'):
-            uri = uri.replace('http://', 'https://', 1)
 
         # URI deconstruction
         match = self.rex.match(uri)
@@ -64,8 +62,10 @@ class GitLabHandler(Handler):
                     path = '/'
 
                 def make_pair(commit):
-                    return ('https://gitlab.ub.uni-bielefeld.de/' + user + '/' + repo + '/commit/' + commit['id'],
-                            commit['created_at'])
+                    memento_path = '/commit/%s' % commit['id']
+                    uri_m = '%s%s/%s/%s%s' % (
+                        protocol, base, user, repo, memento_path)
+                    return (uri_m, commit['created_at'])
                 mapper = make_pair
 
             # Resource is a file
@@ -79,10 +79,10 @@ class GitLabHandler(Handler):
 
                 def make_pair(commit):
                     # HTML Resource
-                    memento_path = '/blob/%s%s' % (commit['sha'], path)
-                    uri_m = '%s%s%s/%s%s' % (
+                    memento_path = '/blob/%s%s' % (commit['id'], path)
+                    uri_m = '%s%s/%s/%s%s' % (
                         protocol, base, user, repo, memento_path)
-                    return (uri_m, commit['commit']['committer']['date'])
+                    return (uri_m, commit['created_at'])
                 mapper = make_pair
 
             # Resource is a directory
@@ -97,12 +97,14 @@ class GitLabHandler(Handler):
                     raise HandlerError("Not found. Empty branch path", 404)
 
                 def make_pair(commit):
-                    return (commit['html_url'].replace('commit', 'tree')+path,
-                            commit['created_at'])
+                    memento_path = '/commit/%s' % commit['id']
+                    uri_m = '%s%s/%s/%s%s' % (
+                        protocol, base, user, repo, memento_path)
+                    return (uri_m, commit['created_at'])
                 mapper = make_pair
 
         # Resource is a raw file
-        elif base == 'raw.githubusercontent.com/' and req_path is not None:
+        elif base == 'raw.githubusercontent.com/' and req_path is not None:  ## TODO!!!
             path = req_path.replace('/', '', 1)
             branch_index = path.find('/')
             branch = path[:branch_index]
@@ -112,9 +114,9 @@ class GitLabHandler(Handler):
                 raise HandlerError("'%s' not found: Raw resource must be a file." %path, 404)
 
             def make_pair(commit):
-                memento_path = '/%s%s' % (commit['sha'], path)
+                memento_path = '/%s%s' % (commit['id'], path)
                 uri_m = '%s%s%s/%s%s' % (protocol, base, user, repo, memento_path)
-                return (uri_m, commit['commit']['committer']['date'])
+                return (uri_m, commit['created_at'])
             mapper = make_pair
 
         if mapper is None:
@@ -127,7 +129,7 @@ class GitLabHandler(Handler):
         params = {
             'per_page': 100,  # Max allowed is 100
             'path': str(path),
-            'sha': str(branch),
+            'branches': str(branch),  ## e.g. https://gitlab.ub.uni-bielefeld.de/api/v3/projects/mloesch%2fsickle/repository/branches/v0.3-dev ## TODO test!!!
             'private_token': self.apikey
         }
         aut_pair = ('MementoTimegate', 'LANLTimeGate14')
