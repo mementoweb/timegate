@@ -8,7 +8,7 @@ from errors.timegateerrors import HandlerError
 
 import time
 
-ACCEPTABLE_RESOURCE = """Acceptable resources URI: repositories (/:user/:repo), folders (/:user/:repo/tree/:branch/:path), files (/:user/:repo/blob/:branch/:path) and raw files (/:user/:repo/:branch/:path)"""
+ACCEPTABLE_RESOURCE = """Acceptable resources URI: repositories (/:user/:repo), folders (/:user/:repo/tree/:branch/:path), files (/:user/:repo/blob/:branch/:path) and raw files (/:user/:repo/raw/:branch/:path)"""
 
 # TODO: wiki pages (https://gitlab.ub.uni-bielefeld.de/opac/cdrom-opac/wikis/home)
 
@@ -80,6 +80,24 @@ class GitLabHandler(Handler):
                 def make_pair(commit):
                     # HTML Resource
                     memento_path = '/blob/%s%s' % (commit['id'], path)
+                    uri_m = '%s%s/%s/%s%s' % (
+                        protocol, base, user, repo, memento_path)
+                    return (uri_m, commit['created_at'])
+                mapper = make_pair
+
+            # Resource is a raw file
+            elif req_path.startswith('/raw/'):
+                path = req_path.replace('/raw/', '', 1)
+                branch_index = path.find('/')
+                branch = path[:branch_index]
+                path = path[branch_index:]
+                is_online = bool(requests.head(uri, params={'private_token': self.apikey}))
+                if path == '' or path.endswith('/') or not is_online:
+                    raise HandlerError("'%s' not found: Raw resource must be a file." %path, 404)
+
+                def make_pair(commit):
+                    # HTML Resource
+                    memento_path = '/raw/%s%s' % (commit['id'], path)
                     uri_m = '%s%s/%s/%s%s' % (
                         protocol, base, user, repo, memento_path)
                     return (uri_m, commit['created_at'])
