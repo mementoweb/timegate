@@ -10,7 +10,7 @@ import time
 
 ACCEPTABLE_RESOURCE = """Acceptable resources URI: repositories (/:user/:repo), folders (/:user/:repo/tree/:branch/:path), files (/:user/:repo/blob/:branch/:path) and raw files (/:user/:repo/raw/:branch/:path)"""
 
-# TODO: wiki pages (https://gitlab.ub.uni-bielefeld.de/opac/cdrom-opac/wikis/home)
+# TODO: wiki pages (e.g. https://gitlab.example.com/auser/aproject/wikis/home)
 
 class GitLabHandler(Handler):
 
@@ -121,21 +121,19 @@ class GitLabHandler(Handler):
                     return (uri_m, commit['created_at'])
                 mapper = make_pair
 
-        # Resource is a raw file
-        elif base == 'raw.githubusercontent.com/' and req_path is not None:  ## TODO!!!
-            path = req_path.replace('/', '', 1)
-            branch_index = path.find('/')
-            branch = path[:branch_index]
-            path = path[branch_index:]
-            is_online = bool(requests.head(uri))  # must be done because API does not make any difference between path or files
-            if path == '' or path.endswith('/') or not is_online:
-                raise HandlerError("'%s' not found: Raw resource must be a file." %path, 404)
-
-            def make_pair(commit):
-                memento_path = '/%s%s' % (commit['id'], path)
-                uri_m = '%s%s%s/%s%s' % (protocol, base, user, repo, memento_path)
-                return (uri_m, commit['created_at'])
-            mapper = make_pair
+            # Resource is a wiki entry
+            # e.g.
+            # https://gitlab.example.com/opac/cdrom-opac/wikis/home -->
+            # https://gitlab.example.com/opac/cdrom-opac/wikis/home?version_id=b4a9027e2948a5ce9ecd3a9c1641ed958b9f7728
+            ## API does not seem to support this: getting wrong commit IDs
+            # elif req_path.startswith('/wikis/'):
+            #     def make_pair(commit):
+            #         # HTML Resource
+            #         memento_path = '%s?version_id=%s' % (req_path, commit['id'])
+            #         uri_m = '%s%s/%s/%s%s' % (
+            #             protocol, base, user, repo, memento_path)
+            #         return (uri_m, commit['created_at'])
+            #     mapper = make_pair
 
         if mapper is None:
             # The resource is not accepcted.
@@ -147,7 +145,7 @@ class GitLabHandler(Handler):
         params = {
             'per_page': 100,  # Max allowed is 100
             'path': str(path),
-            'branches': str(branch),  ## e.g. https://gitlab.ub.uni-bielefeld.de/api/v3/projects/mloesch%2fsickle/repository/branches/v0.3-dev ## TODO test!!!
+            'branches': str(branch),
             'private_token': self.apikey
         }
         aut_pair = ('MementoTimegate', 'LANLTimeGate14')
