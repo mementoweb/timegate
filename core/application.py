@@ -12,6 +12,8 @@ from core.cache import Cache
 from core.handler_baseclass import parsed_request, Handler
 from core.timegate_utils import (nowstr, validate_req_datetime, parse_req_resource, best, date_str, now, get_complete_uri)
 
+PROTO_HOST = "http://" + HOST
+
 
 def discover_handler(path):
     """
@@ -109,6 +111,10 @@ def application(env, start_response):
 
     req_datetime = env.get('HTTP_ACCEPT_DATETIME')
     req_method = env.get('REQUEST_METHOD')
+    req_protocol = env.get("HTTP_X_FORWORDED_PROTO", "http")
+
+    PROTO_HOST = req_protocol + "://" + HOST
+
     force_cache_refresh = (env.get('HTTP_CACHE CONTROL') == 'no-cache' or
                            env.get('HTTP_CACHE_CONTROL') == 'no-cache')
     logging.info("Incoming request: %s %s, Accept-Datetime: %s , Force Refresh: %s" % (
@@ -209,8 +215,8 @@ def memento_response(memento, uri_r, resource, start_response, first=None, last=
     # TimeGate link not allowed here
     links = ['<%s>; rel="original"' % uri_r]
     if has_timemap and USE_TIMEMAPS:
-        timemap_link = '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
-        timemap_json = '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
+        timemap_link = '%s/%s/%s/%s' % (PROTO_HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
+        timemap_json = '%s/%s/%s/%s' % (PROTO_HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
         links.append('<%s>; rel="timemap"; type="application/link-format"' % timemap_link)
         links.append('<%s>; rel="timemap"; type="application/json"' % timemap_json)
     (uri_m, dt_m) = memento
@@ -262,11 +268,11 @@ def timemap_link_response(mementos, uri_r, resource, start_response):
     # Adds Original, TimeGate and TimeMap links
     original_link = '<%s>; rel="original"' % uri_r
     timegate_link = '<%s/%s/%s>; rel="timegate"' % (
-        HOST, TIMEGATE_URI_PART, resource)
+        PROTO_HOST, TIMEGATE_URI_PART, resource)
     link_self = '<%s/%s/%s/%s>; rel="self"; type="application/link-format"' % (
-        HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
+        PROTO_HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
     json_self = '<%s/%s/%s/%s>; rel="timemap"; type="application/json"' % (
-        HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
+        PROTO_HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource)
 
     # Browse through Mementos to generate the TimeMap links list
     mementos_links = ['<%s>; rel="memento"; datetime="%s"' % (uri, date_str(date))
@@ -312,7 +318,7 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
     response_dict = {}
 
     response_dict['original_uri'] = uri_r
-    response_dict['timegate_uri'] = '%s/%s/%s' % (HOST, TIMEGATE_URI_PART, resource)
+    response_dict['timegate_uri'] = '%s/%s/%s' % (PROTO_HOST, TIMEGATE_URI_PART, resource)
 
     # Browse through Mementos to generate TimeMap links dict list
     mementos_links = [{'uri': urlstr, 'datetime': date_str(date)} for (urlstr, date) in mementos]
@@ -329,8 +335,8 @@ def timemap_json_response(mementos, uri_r, resource, start_response):
 
     # Builds self (TimeMap)links dict
     response_dict['timemap_uri'] = {
-        'json_format': '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource),
-        'link_format': '%s/%s/%s/%s' % (HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
+        'json_format': '%s/%s/%s/%s' % (PROTO_HOST, TIMEMAP_URI_PART, JSON_URI_PART, resource),
+        'link_format': '%s/%s/%s/%s' % (PROTO_HOST, TIMEMAP_URI_PART, LINK_URI_PART, resource)
     }
 
     # Creates the JSON str from the dict
@@ -394,6 +400,7 @@ def timegate(req_uri, req_datetime, start_response, force_cache_refresh=False):
     :return: The body of the HTTP response
     """
 
+    logging.debug("TimeGate Request URI: %s" % req_uri)
     # Parses the date time and original resoure URI
     if req_datetime is None or req_datetime == '':
         accept_datetime = now()
