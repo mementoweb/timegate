@@ -19,7 +19,7 @@ class W3cHandler(Handler):
         Handler.__init__(self)
 
         # Local fields
-        self.api_url = 'https://api-test.w3.org/specifications/%s/versions?_format=json&apikey=%s&embed=1'
+        self.api_url = 'https://api.w3.org/specifications/%s/versions?_format=json&apikey=%s&embed=1'
 
         self.re_spec_name = re.compile("https?:\/\/(www.)?w3.org\/TR\/(.*)", re.IGNORECASE)
 
