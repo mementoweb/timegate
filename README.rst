@@ -1,6 +1,9 @@
 Memento TimeGate
 ================
 
+.. image:: https://img.shields.io/travis/mementoweb/timegate.svg
+           :target: https://travis-ci.org/mementoweb/timegate
+
 Make your web resources `Memento`_ compliant in a few easy steps.
 
 The Memento framework enables datetime negotiation for web resources.
