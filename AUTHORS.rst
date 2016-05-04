@@ -17,4 +17,5 @@ A Memento TimeGate contributors:
 - Jiri Kuncar <jiri.kuncar@gmail.com>
 - Luda171 <ludab@lanl.gov>
 - Sawood Alam <ibnesayeed@gmail.com>
+- Tibor Simko <tibor.simko@cern.ch>
 - Yorick Chollet <yorick.chollet@gmail.com>
