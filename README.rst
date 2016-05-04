@@ -40,7 +40,7 @@ TimeGate datetime negotiation server as the **TimeGate**.
 Example
 -------
 
-.. figure:: https://raw.githubusercontent.com/mementoweb/timegate/master/doc/uris_example.png
+.. figure:: https://raw.githubusercontent.com/mementoweb/timegate/master/docs/uris_example.png
    :alt: Image
 
    Image
