@@ -4,7 +4,8 @@ Memento TimeGate
 .. image:: https://img.shields.io/travis/mementoweb/timegate.svg
            :target: https://travis-ci.org/mementoweb/timegate
 
-Make your web resources `Memento`_ compliant in a few easy steps.
+Make your web resources `Memento <http://www.mementoweb.org>`__ compliant in a
+few easy steps.
 
 The Memento framework enables datetime negotiation for web resources.
 Knowing the URI of a Memento-compliant web resource, a user can select a
@@ -22,7 +23,7 @@ But in such datetime negotiation server, only a small proportion of the
 code is specific to the particular web resources it handles. The main
 part of logic will be very similar throughout many implementations.
 TimeGate isolates the core components and functionality. With it,
-there’s no need to implement, or to re-implement the same logic and
+there's no need to implement, or to re-implement the same logic and
 algorithms over and over again. Its architecture is designed to accept
 easy-to-code plugins to match any web resources.
 
@@ -46,33 +47,74 @@ Example
 .. figure:: https://raw.githubusercontent.com/mementoweb/timegate/master/docs/uris_example.png
    :alt: Image
 
-   Image
-
 There are only two steps to make such resource Memento compliant.
 
 Step 1: Setting up TimeGate
 ---------------------------
 
 The first thing to do is to set up the TimeGate for the specific web
-server. \* Run the TimeGate with your custom handler. The handler is the
-piece of code that is specific to how the web server manages Original
-Resources and Mementos. It needs to implement either one of the
-following: - Given a URI-R, return the list of URI-Ms along with their
-respective dates. - Given a URI-R and a datetime, return one single
-URI-M along with its date.
+server.
+
+* Run the TimeGate with your custom handler. The handler is the
+  piece of code that is specific to how the web server manages Original
+  Resources and Mementos. It needs to implement either one of the
+  following:
+
+  - Given a URI-R, return the list of URI-Ms along with their respective dates.
+  - Given a URI-R and a datetime, return one single URI-M along with its date.
 
 Step 2: Providing the headers
 -----------------------------
 
-The second thing to do is to provide Memento’s HTTP headers at the web
-server. \* Add HTTP headers required by the Memento protocol to
-responses from the Original Resource and its Mementos: - For the
-Original Resource, add a “Link” header that points at its TimeGate - For
-each Memento, add a “Link” header that points at the TimeGate - For each
-Memento, add a “Link” header that points to the Original Resource - For
-each Memento, add a Memento-Datetime header that conveys the snapshot
-datetime
+The second thing to do is to provide Memento's HTTP headers at the web
+server.
+
+* Add HTTP headers required by the Memento protocol to responses from the
+  Original Resource and its Mementos:
+
+  - For the Original Resource, add a "Link" header that points at its TimeGate
+  - For each Memento, add a "Link" header that points at the TimeGate
+  - For each Memento, add a "Link" header that points to the Original Resource
+  - For each Memento, add a Memento-Datetime header that conveys the snapshot datetime
 
 Using the previous example, and supposing a TimeGate is running at
+``http://example.com/timegate/``, Memento HTTP response headers for the
+Original Resource and one Memento look as follows. |Image|
 
-.. _Memento: http://www.mementoweb.org
+And that's it! With the TimeGate, datetime negotiation is now possible
+for these resources.
+
+How it works
+------------
+
+Read the `big
+picture <https://github.com/mementoweb/timegate/wiki/The-Big-Picture>`__
+to understand how it works and what are the requirements.
+
+Getting Started
+---------------
+
+Start by `reading the
+guide <https://github.com/mementoweb/timegate/wiki/Getting-Started>`__
+for comprehensive information about how to use TimeGate for your own web
+resources.
+
+Requirements
+------------
+
+- `Python <https://www.python.org>`__
+- `uWSGI <http://uwsgi-docs.readthedocs.org/en/latest/>`__
+
+Documentation
+-------------
+
+See the `wiki <https://github.com/mementoweb/timegate/wiki>`__.
+
+License
+-------
+
+See the
+`LICENSE <https://github.com/mementoweb/timegate/blob/master/LICENSE>`__
+file.
+
+.. |Image| image:: https://raw.githubusercontent.com/mementoweb/timegate/master/docs/headers_example.png
