@@ -71,7 +71,7 @@ class ExampleHandler(Handler):
             datetimes = self.dates[uri_r]
 
             # Generate the list of tuples [(uri_string, date_string)]
-            tuple_list = zip(uri_ms, datetimes)
+            tuple_list = list(zip(uri_ms, datetimes))
             return tuple_list  # A list of tuple containing all Mementos is returned
         else:
             # No Memento for this uri was found in archive

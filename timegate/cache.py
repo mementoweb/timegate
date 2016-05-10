@@ -20,7 +20,6 @@ from werkzeug.contrib.cache import FileSystemCache, md5
 
 from . import utils as timegate_utils
 from .errors import CacheError
-from .handler import parsed_request
 
 
 class Cache(object):
@@ -119,28 +118,10 @@ class Cache(object):
         """
         return self.get_until(uri_r, timegate_utils.now())
 
-    def refresh(self, uri_r, getter, *args, **kwargs):
-        """Refreshes the cached TimeMap for a specific resource and returns it.
+    def set(self, uri_r, timemap):
+        """Set the cached TimeMap for that URI-R.
 
-        :param uri_r: The original resource URI to refresh the TimeMap
-        :param getter: The function to call to get a fresh TimeMap
-        :param args: *getter* arguments
-        :param kwargs: *getter* keywords arguments
-        :return: The fresh TimeMap
-
-        """
-        timemap = parsed_request(getter, *args, **kwargs)
-        # timemap,new_uri = parsed_request(getter, *args, **kwargs)
-        # if new_uri:
-        # uri_r = new_uri
-
-        # Creates or refreshes the new timemap for that URI-R
-        self._set(uri_r, timemap)
-        return timemap
-
-    def _set(self, uri_r, timemap):
-        """Sets / refreshes the cached TimeMap for that URI-R. And appends it
-        with a timestamp of when it is stored.
+        It appends it with a timestamp of when it is stored.
 
         :param uri_r: The URI-R of the original resource.
         :param timemap: The value to cache.

@@ -12,12 +12,12 @@ from __future__ import absolute_import, print_function
 
 import logging
 import StringIO
+from datetime import datetime
 
 from lxml import etree
 
 from timegate.errors import HandlerError
 from timegate.handler import Handler
-from timegate.utils import now
 
 
 class NaraHandler(Handler):
@@ -27,7 +27,7 @@ class NaraHandler(Handler):
         self.baseuri = "http://webharvest.gov/"
         congress_number = 109
         FIRST_YEAR = 2006
-        THIS_YEAR = now().year
+        THIS_YEAR = datetime.utcnow().year
         self.collections = ["peth04"]
 
         for i in range(FIRST_YEAR, THIS_YEAR, 2):

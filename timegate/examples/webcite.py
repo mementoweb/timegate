@@ -12,13 +12,13 @@
 
 from __future__ import absolute_import, print_function
 
+import cookielib
 import logging
 import StringIO
 import urllib2
 
 from lxml import etree
 
-import cookielib
 from timegate.errors import HandlerError
 from timegate.handler import Handler
 

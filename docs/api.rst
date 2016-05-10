@@ -10,7 +10,16 @@
 API Docs
 ========
 
-timegate
---------
+.. automodule:: timegate.application
 
-.. automodule:: timegate
+Errors
+------
+
+.. automodule:: timegate.errors
+   :members:
+
+Utilities
+---------
+
+.. automodule:: timegate.utils
+   :members:

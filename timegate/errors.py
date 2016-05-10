@@ -12,39 +12,46 @@
 
 from __future__ import absolute_import, print_function
 
+from werkzeug.exceptions import HTTPException
 
-class TimegateError(Exception):
 
-    def __init__(self, msg, status):
-        self.status = status
-        super(TimegateError, self).__init__(msg)
+class TimegateError(HTTPException):
+    """General TimeGate Exception."""
+
+    code = 400
+    description = 'Invalid TimeGate request.'
+
+    def __init__(self, msg, status=None):
+        super(TimegateError, self).__init__(description=msg)
+        if status:
+            self.code = status
 
 
 class TimeoutError(TimegateError):
+    """Raise to signalize a timeout."""
 
-    def __init__(self, msg, status=416):
-        super(TimegateError, self).__init__(msg, status)
+    code = 416
 
 
 class URIRequestError(TimegateError):
+    """Raise if the request contains invalid URI."""
 
-    def __init__(self, msg, status=400):
-        super(URIRequestError, self).__init__(msg, status)
+    code = 400
 
 
 class HandlerError(TimegateError):
+    """Raise to signal handler error."""
 
-    def __init__(self, msg, status=503):
-        super(HandlerError, self).__init__(msg, status)
+    code = 503
 
 
 class DateTimeError(TimegateError):
+    """Raise if the server is unable to handle the date time."""
 
-    def __init__(self, msg, status=400):
-        super(DateTimeError, self).__init__(msg, status)
+    code = 400
 
 
 class CacheError(TimegateError):
+    """Raise if the cache is not functioning."""
 
-    def __init__(self, msg, status=500):
-        super(CacheError, self).__init__(msg, status)
+    code = 500
