@@ -13,43 +13,16 @@
 from __future__ import absolute_import, print_function
 
 import logging
-import re
 from datetime import datetime, timedelta
 
 from dateutil.parser import parse as parse_datestr
 from dateutil.tz import tzutc
 
-from .constants import BASE_URI, DATE_FORMAT
+from ._compat import urlparse
 from .errors import DateTimeError, URIRequestError
 
-try:
-    from urlparse import urlparse
-except ImportError:
-    from urllib.parse import urlparse
 
-
-def validate_req_datetime(datestr, strict=True):
-    """Parse the requested date string into a dateutil time object.
-
-    Raises ``DateTimeError`` if the parse fails to produce a datetime.
-
-    :param datestr: A date string, in a common format.
-    :param strict: If the datetime MUST follow the exact format DATEFMT
-    :return: The dateutil time object.
-    """
-    try:
-        if strict:
-            date = datetime.strptime(datestr, DATE_FORMAT)
-        else:
-            date = parse_datestr(datestr, fuzzy=True)
-        logging.debug("Accept datetime parsed to: " + date_str(date))
-        return date.replace(tzinfo=tzutc())
-    except Exception as e:
-        raise DateTimeError("Error parsing 'Accept-Datetime: %s' \n"
-                            "Message: %s" % (datestr, e))
-
-
-def get_complete_uri(resource):
+def get_complete_uri(resource, base_uri=None):
     """Return the complete URI from the resource.
 
     It appends the handler's base_uri to the resource if it not present.
@@ -57,10 +30,11 @@ def get_complete_uri(resource):
     in the future.
 
     :param resource: The resource to make canonical.
+    :param base_uri: Base URI.
     :return: The original URI in its canonical form.
     """
-    if not resource.startswith(BASE_URI):
-        resource = BASE_URI + resource
+    if base_uri and not resource.startswith(base_uri):
+        resource = base_uri + resource
     return resource
 
 
@@ -92,11 +66,7 @@ def validate_uristr(uristr):
     :param uristr: The uri string that needs to be verified.
     :return: The validated uri string.
     """
-    try:
-        return str(urlparse(uristr).geturl())
-    except Exception as e:
-        raise Exception("Error: cannot parse uri string %s \n"
-                        "Message: %s" % (uristr, e))
+    return str(urlparse(uristr).geturl())
 
 
 def validate_date(datestr, strict=False):
@@ -104,44 +74,15 @@ def validate_date(datestr, strict=False):
 
     :param datestr: The date string representation.
     :param strict: When True, the date must strictly follow the format defined
-    in the config file (DATEFMT). When False, the date string can be fuzzy and
-    the function will try to reconstruct it.
+        in the config file (DATEFMT). When False, the date string can be fuzzy
+        and the function will try to reconstruct it.
     :return: The datetime object form the parsed date string.
     """
-    try:
-        if strict:
-            date = datetime.strptime(datestr, DATE_FORMAT)
-        else:
-            date = parse_datestr(datestr, fuzzy=True).replace(tzinfo=tzutc())
-        return date
-    except Exception as e:
-        raise Exception("Error: cannot parse date string %s" % datestr)
-
-
-def date_str(date, format=DATE_FORMAT):
-    """Returns a string representation of the date object.
-
-    :param date: the date object which needs to be printed :param
-    format: the string format of the date By default this is the format
-    specified in the config file :return: The formatted date string.
-
-    """
-    return date.strftime(format)
-
-
-def parse_date(*args, **kwargs):
-    return parse_datestr(*args, **kwargs)
-
-
-def nowstr():
-    """String representation of the current UTC time.
-
-    :return: a string representation of the current UTC time
-    """
-    return date_str(datetime.utcnow()).encode('utf8')
+    return parse_datestr(datestr, fuzzy=True).replace(tzinfo=tzutc())
 
 
 def best(timemap, accept_datetime, timemap_type, sorted=True):
+    """Find best memento."""
     assert(timemap)
     assert(accept_datetime)
     if timemap_type == 'vcs':
@@ -151,15 +92,16 @@ def best(timemap, accept_datetime, timemap_type, sorted=True):
 
 
 def closest(timemap, accept_datetime, sorted=True):
-    """Finds the absolute closest memento chronologically to a datetime.
+    """Find the absolutely closest memento chronologically to a datetime.
+
     Details of the requirements at
     http://www.mementoweb.org/guide/rfc/#SpecialCases, point 4.5.3.
 
     :param timemap: A sorted Timemap
     :param accept_datetime: the time object for which the best memento must
-    be found.
+        be found.
     :param sorted: boolean to indicate if the list is sorted or not.
-    :return:
+    :return: A tuple with memento URI and its datetime.
     """
 
     delta = timedelta.max
@@ -188,7 +130,7 @@ def closest_before(timemap, accept_datetime, sorted=True):
 
     :param timemap: A sorted Timemap.
     :param accept_datetime: The time object for which the best memento
-    must be found.
+        must be found.
     :param sorted: Boolean to indicate if the list is sorted or not.
     :return: The uri_m string of the closest memento.
     """
@@ -234,70 +176,22 @@ def closest_binary(timemap, accept_datetime):
 
     :param timemap: A sorted Timemap.
     :param accept_datetime: The time object for which the best memento
-    must be found.
+        must be found.
     :return: The uri_m string of the closest memento.
     """
     # TODO implement
-    pass
 
 
 def closest_before_binary(timemap, accept_datetime):
-    """Finds the closest memento in the past of a datetime using binary search
-    in a sorted list. Complexity O(log(n)) instead of O(n) Details of the
-    requirements at http://www.mementoweb.org/guide/rfc/#SpecialCases, point
-    4.5.3.
+    """Find the closest memento in the past of a datetime using binary search.
+
+    Note the timemap **must** be a sorted list. Complexity ``O(log(n))``
+    instead of ``O(n)`` Details of the requirements at
+    http://www.mementoweb.org/guide/rfc/#SpecialCases, point 4.5.3.
 
     :param timemap: A sorted Timemap.
     :param accept_datetime: The time object for which the best memento
-    must be found.
+        must be found.
     :return: The uri_m string of the closest memento.
     """
     # TODO implement
-
-    pass
-
-
-def now():
-    """Date representation of the current UTC time.
-
-    :return: a date representation of the current UTC time
-    """
-    return datetime.utcnow().replace(tzinfo=tzutc())
-
-
-def get_uri_representations(uri):
-    """Needed because some API do not process the url canonization properly,
-    and treat http://example.com and http://www.example.com differently.
-
-    This function returns the list of canonical representation of a URI.
-    It also appends the `http://` protocol if missing. For instance,
-    *uri*='example.com' will return ['http://example.com',
-    'http://www.example.com'] and *uri*='domain.example.com' will return
-    ['http://domain.example.com'].
-
-    :param uri: The uri string to make canonical.
-    :return: The canonical representations of this URI.
-    """
-    uri_list = []
-
-    m = re.match(r'(https?://)?(www.)?(.+)', uri)
-    if not m:
-        return uri_list
-    http, www, netloc = m.groups()
-    # domain.example.com/path/ not example.com/path/
-    has_subdomain = len(netloc.split('/')[0].split('.')) > 2
-
-    if not http:
-        http = 'http://'
-
-    if www:
-        uri_list.append(http + www + netloc)
-        if not has_subdomain:
-            uri_list.append(http + netloc)
-    else:
-        www = 'www.'
-        uri_list.append(http + netloc)
-        if not has_subdomain:
-            uri_list.append(http + www + netloc)
-
-    return uri_list

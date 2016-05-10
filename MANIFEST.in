@@ -1,6 +1,7 @@
 include *.py
 include *.rst
 include *.sh
+include .coveragerc
 include LICENSE
 include pytest.ini
 include timegate/conf/*.ini

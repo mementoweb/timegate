@@ -36,6 +36,9 @@ extras_require = {
     'docs': [
         'Sphinx>=1.3',
     ],
+    'uwsgi': [
+        'uWSGI>=2.0.3',
+    ],
     'tests': tests_require,
 }
 
@@ -50,10 +53,10 @@ setup_requires = [
 ]
 
 install_requires = [
+    'LinkHeader>=0.4.3',
     'lxml>=3.4.1',
     'python-dateutil>=2.1',
     'requests>=2.2.1',
-    'uWSGI>=2.0.3',
     'werkzeug>=0.9.6',
 ]
 
@@ -81,6 +84,29 @@ setup(
     include_package_data=True,
     platforms='any',
     entry_points={
+        'timegate.handlers': [
+            'arxiv = timegate.examples.arxiv:ArxivHandler',
+            'aueb = timegate.examples.aueb:AuebHandler',
+            'can = timegate.examples.can:CanHandler',
+            'cat = timegate.examples.cat:CatHandler',
+            'cr = timegate.examples.cr:CrHandler',
+            'es = timegate.examples.es:EsHandler',
+            'github = timegate.examples.github:GithubHandler',
+            'gitlab = timegate.examples.gitlab:GitlabHandler',
+            'loc = timegate.examples.loc:LocHandler',
+            'mediawiki = timegate.examples.mediawiki:MediawikiHandler',
+            'nara = timegate.examples.nara:NaraHandler',
+            'orain = timegate.examples.orain:OrainHandler',
+            'pastpages = timegate.examples.pastpages:PastpagesHandler',
+            'po = timegate.examples.po:PoHandler',
+            'sg = timegate.examples.sg:SgHandler',
+            'si = timegate.examples.si:SiHandler',
+            'simple = timegate.examples.simple:ExampleHandler',
+            'w3c = timegate.examples.w3c:W3cHandler',
+            'webcite = timegate.examples.webcite:WebciteHandler',
+            'wikia = timegate.examples.wikia:WikiaHandler',
+            'wikipedia = timegate.examples.wikipedia:WikipediaHandler',
+        ],
     },
     extras_require=extras_require,
     install_requires=install_requires,
