@@ -48,12 +48,17 @@ class ExampleHandler(Handler):
         ]
         self.archives = {
             'http://www.example.com/resourceA': versions_a,
-            'http://www.example.com/resourceB': versions_b
+            'http://www.example.com/resourceB': versions_b,
+            'http://www.example.com/resource%20space': [
+                'http://www.example.com/space',
+            ],
         }
         self.dates = {
             'http://www.example.com/resourceA': date_times_a,
-            'http://www.example.com/resourceB': date_times_b
-
+            'http://www.example.com/resourceB': date_times_b,
+            'http://www.example.com/resource%20space': [
+                '1970-01-01T00:00:00Z'
+            ],
         }
 
     # This is the function to implement.

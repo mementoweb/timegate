@@ -39,7 +39,7 @@ API_TIME_OUT = 6
 # Handler configuration
 HANDLER_MODULE = 'simple'
 BASE_URI = ''
-RESOURCE_TYPE = 'snapshot'
+RESOURCE_TYPE = 'vcs'
 USE_TIMEMAPS = True
 
 # Cache

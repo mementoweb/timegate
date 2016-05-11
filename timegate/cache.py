@@ -14,8 +14,10 @@ from __future__ import absolute_import, print_function
 
 import logging
 import os
+from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
+from dateutil.tz import tzutc
 from werkzeug.contrib.cache import FileSystemCache, md5
 
 from . import utils as timegate_utils
@@ -25,8 +27,8 @@ from .errors import CacheError
 class Cache(object):
     """Base class for TimeGate caches."""
 
-    def __init__(self, path, tolerance, expiration, max_values, run_tests=True,
-                 max_file_size=0):
+    def __init__(self, path, tolerance, expiration, max_values,
+                 run_tests=True, max_file_size=0):
         """Constructor method.
 
         :param path: The path of the cache database file.
@@ -44,7 +46,7 @@ class Cache(object):
         """
         # Parameters Check
         if tolerance <= 0 or expiration <= 0 or max_values <= 0:
-            raise CacheError("Cannot create cache: all parameters must be > 0")
+            raise CacheError('Cannot create cache: all parameters must be > 0')
 
         self.tolerance = relativedelta(seconds=tolerance)
         self.path = path.rstrip('/')
@@ -58,18 +60,18 @@ class Cache(object):
         # Testing cache
         if run_tests:
             try:
-                key = '1'
+                key = b'1'
                 val = 1
                 self.backend.set(key, val)
                 assert (not self.CHECK_SIZE) or self._check_size(key) > 0
                 assert self.backend.get(key) == val
-                os.remove(self.path + '/' + md5(key).hexdigest())
+                os.remove(os.path.join(self.path, md5(key).hexdigest()))
             except Exception as e:
-                raise CacheError("Error testing cache: %s" % e)
+                raise CacheError('Error testing cache: %s' % e)
 
         logging.debug(
-            "Cache created. max_files = %d. Expiration = %d. "
-            "max_file_size = %d" % (
+            'Cache created. max_files = %d. Expiration = %d. '
+            'max_file_size = %d' % (
                 self.max_values, expiration, self.max_file_size))
 
     def get_until(self, uri_r, date):
@@ -90,21 +92,21 @@ class Cache(object):
         try:
             val = self.backend.get(key)
         except Exception as e:
-            logging.error("Exception loading cache content: %s" % e)
+            logging.error('Exception loading cache content: %s' % e)
             return None
 
         if val:
             # There is a value in the cache
             timestamp, timemap = val
-            logging.info("Cached value exists for %s" % uri_r)
+            logging.info('Cached value exists for %s' % uri_r)
             if date > timestamp + self.tolerance:
-                logging.info("Cache MISS: value outdated for %s" % uri_r)
+                logging.info('Cache MISS: value outdated for %s' % uri_r)
                 timemap = None
             else:
-                logging.info("Cache HIT: found value for %s" % uri_r)
+                logging.info('Cache HIT: found value for %s' % uri_r)
         else:
             # Cache MISS: No value
-            logging.info("Cache MISS: No cached value for %s" % uri_r)
+            logging.info('Cache MISS: No cached value for %s' % uri_r)
             timemap = None
 
         return timemap
@@ -116,7 +118,8 @@ class Cache(object):
         :return: [(memento_uri_string, datetime_obj),...] list if it is in
         cache and if it is within the cache tolerance, None otherwise.
         """
-        return self.get_until(uri_r, timegate_utils.now())
+        until = datetime.utcnow().replace(tzinfo=tzutc())
+        return self.get_until(uri_r, until)
 
     def set(self, uri_r, timemap):
         """Set the cached TimeMap for that URI-R.
@@ -127,8 +130,8 @@ class Cache(object):
         :param timemap: The value to cache.
         :return: The backend setter method return value.
         """
-        logging.info("Updating cache for %s" % uri_r)
-        timestamp = timegate_utils.now()
+        logging.info('Updating cache for %s' % uri_r)
+        timestamp = datetime.utcnow().replace(tzinfo=tzutc())
         val = (timestamp, timemap)
         key = uri_r
         try:
@@ -136,7 +139,7 @@ class Cache(object):
             if self.CHECK_SIZE:
                 self._check_size(uri_r)
         except Exception as e:
-            logging.error("Error setting cache value: %s" % e)
+            logging.error('Error setting cache value: %s' % e)
 
     def _check_size(self, key, delete=True):
         """Check the size that a specific TimeMap value is using on disk.
@@ -153,16 +156,16 @@ class Cache(object):
             fpath = self.path + '/' + fname
             size = os.path.getsize(fpath)
             if size > self.max_file_size and delete:
-                message = ("Cache value too big (%dB, max %dB) "
-                           "for the TimeMap of %s")
+                message = ('Cache value too big (%dB, max %dB) '
+                           'for the TimeMap of %s')
                 if delete:
-                    message += ". Deleting cached value."
+                    message += '. Deleting cached value.'
                     os.remove(fpath)
                     size = 0
                 logging.warning(message % (size, self.max_file_size, key))
             return size
         except Exception as e:
             logging.error(
-                "Exception checking cache value size for TimeMap of %s "
-                "Exception: %s" % (key, e))
+                'Exception checking cache value size for TimeMap of %s '
+                'Exception: %s' % (key, e))
             return 0

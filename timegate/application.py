@@ -26,16 +26,17 @@ from pkg_resources import iter_entry_points
 from werkzeug.exceptions import HTTPException, abort
 from werkzeug.http import http_date, parse_date
 from werkzeug.local import Local, LocalManager
-from werkzeug.routing import Map, Rule
+from werkzeug.routing import BaseConverter, Map, Rule, ValidationError
 from werkzeug.utils import cached_property, import_string
 from werkzeug.wrappers import Request, Response
 
 from . import constants
+from ._compat import quote, unquote
 from .cache import Cache
 from .config import Config
 from .errors import TimegateError, URIRequestError
 from .handler import Handler, parsed_request
-from .utils import best, get_complete_uri, parse_req_resource
+from .utils import best
 
 local = Local()
 """Thread safe local data storage."""
@@ -71,24 +72,44 @@ def load_handler(name_or_path):
         return import_string(name_or_path)()
 
 
+class URIConverter(BaseConverter):
+    """URI Converter."""
+
+    def __init__(self, url_map, base_uri=None):
+        super(URIConverter, self).__init__(url_map)
+        self.base_uri = base_uri
+        self.regex = (
+            r"([^:/?#]+:)?(//[^/?#]*)?"
+            r"[^?#]*(\?[^#]*)?(#.*)?"
+        )
+
+    def to_python(self, value):
+        """Return value with base URI prefix."""
+        value = value.replace(' ', '%20')  # encode
+        if self.base_uri and not value.startswith(self.base_uri):
+            return self.base_uri + value
+        return value
+
+    def to_url(self, value):
+        """Return value without base URI if it is defined."""
+        value = value.replace('%20', ' ')  # decode
+        if self.base_uri and value.startswith(self.base_uri):
+            return value[len(self.base_uri):]
+        return value
+
+
 class TimeGate(object):
     """Implementation of Memento protocol with configurable handlers."""
 
     def __init__(self, config=None, cache=None):
         """Initialize application with handler."""
-        rules = [
-            Rule('/timegate/<path:uri_r>', endpoint='timegate',
-                 methods=['GET', 'HEAD']),
-            Rule('/timemap/<any(json, link):response_type>/<path:uri_r>',
-                 endpoint='timemap', methods=['GET', 'HEAD']),
-        ]
-
-        self.url_map = Map(rules)
-        self.cache = cache
-
         self.config = Config(None)
         self.config.from_object(constants)
         self.config.update(config or {})
+        if cache:
+            self.cache = cache
+        elif self.config['CACHE_USE']:
+            self._build_default_cache()
 
     @cached_property
     def handler(self):
@@ -105,6 +126,19 @@ class TimeGate(object):
                 "NotImplementedError: Handler has neither `get_memento` "
                 "nor `get_all_mementos` method.")
         return handler
+
+    @cached_property
+    def url_map(self):
+        """Build URL map."""
+        base_uri = self.config['BASE_URI']
+        rules = [
+            Rule('/timegate/<uri(base_uri="{0}"):uri_r>'.format(base_uri),
+                 endpoint='timegate', methods=['GET', 'HEAD']),
+            Rule('/timemap/<any(json, link):response_type>/'
+                 '<uri(base_uri="{0}"):uri_r>'.format(base_uri),
+                 endpoint='timemap', methods=['GET', 'HEAD']),
+        ]
+        return Map(rules, converters={'uri': URIConverter})
 
     def _build_default_cache(self):
         """Build default cache object."""
@@ -188,9 +222,6 @@ class TimeGate(object):
         else:
             accept_datetime = datetime.utcnow().replace(tzinfo=tzutc())
 
-        resource = parse_req_resource(uri_r)
-        # Rewrites the original URI from the requested resource
-        uri_r = get_complete_uri(resource, self.config['BASE_URI'])
         # Runs the handler's API request for the Memento
         mementos = first = last = None
         HAS_TIMEMAP = hasattr(self.handler, 'get_all_mementos')
@@ -211,7 +242,6 @@ class TimeGate(object):
         return memento_response(
             memento,
             uri_r,
-            resource,
             first,
             last,
             has_timemap=HAS_TIMEMAP and self.config['USE_TIMEMAPS'],
@@ -231,16 +261,12 @@ class TimeGate(object):
         if not self.config['USE_TIMEMAPS']:
             abort(403)
 
-        resource = parse_req_resource(uri_r)
-        # Rewrites the original URI from the requested resource
-        uri_r = get_complete_uri(resource, self.config['BASE_URI'])
         mementos = self.get_all_mementos(uri_r)
-
         # Generates the TimeMap response body and Headers
         if response_type == 'json':
-            return timemap_json_response(self, mementos, uri_r, resource)
+            return timemap_json_response(self, mementos, uri_r)
         else:
-            return timemap_link_response(self, mementos, uri_r, resource)
+            return timemap_link_response(self, mementos, uri_r)
 
 
 @local_manager.middleware
@@ -267,16 +293,15 @@ def application(environ, start_response):
 def memento_response(
         memento,
         uri_r,
-        resource,
         first=None,
         last=None,
         has_timemap=False):
-    """Returns a 302 redirection to the best Memento for a resource and a
-    datetime requested by the user.
+    """Return a 302 redirection to the best Memento for a resource.
+
+    It includes necessary headers including datetime requested by the user.
 
     :param memento: (The URI string, dt obj) of the best memento.
     :param uri_r: The original resource's complete URI.
-    :param resource: The original resource's shortened URI.
     :param first: (Optional) (URI string, dt obj) of the first memento.
     :param last: (Optional) (URI string, dt obj) of the last memento.
     :param has_timemap: Flag indicating that the handler accepts
@@ -291,7 +316,7 @@ def memento_response(
                                     ('json', 'application/json'), ):
             links.append(Link(
                 url_for('timemap', dict(
-                    response_type=response_type, uri_r=resource
+                    response_type=response_type, uri_r=uri_r
                 ), force_external=True),
                 rel='timemap', type=mime
             ))
@@ -332,7 +357,7 @@ def memento_response(
     return Response(None, headers=headers, status=302)
 
 
-def timemap_link_response(app, mementos, uri_r, resource):
+def timemap_link_response(app, mementos, uri_r):
     """Return a 200 TimeMap response.
 
     :param mementos: A sorted (ascending by date) list of (uri_str,
@@ -345,18 +370,18 @@ def timemap_link_response(app, mementos, uri_r, resource):
     # Adds Original, TimeGate and TimeMap links
     original_link = Link(uri_r, rel='original')
     timegate_link = Link(
-        url_for('timegate', dict(uri_r=resource), force_external=True),
+        url_for('timegate', dict(uri_r=uri_r), force_external=True),
         rel='timegate',
     )
     link_self = Link(
         url_for('timemap', dict(
-            response_type='link', uri_r=resource
+            response_type='link', uri_r=uri_r
         ), force_external=True),
         rel='self', type='application/link-format',
     )
     json_self = Link(
         url_for('timemap', dict(
-            response_type='json', uri_r=resource
+            response_type='json', uri_r=uri_r
         ), force_external=True),
         rel='timemap', type='application/json',
     )
@@ -393,7 +418,7 @@ def timemap_link_response(app, mementos, uri_r, resource):
     return Response(body, headers=headers)
 
 
-def timemap_json_response(app, mementos, uri_r, resource):
+def timemap_json_response(app, mementos, uri_r):
     """Creates and sends a timemap response.
 
     :param mementos: A sorted list of (uri_str, datetime_obj) tuples
@@ -409,7 +434,7 @@ def timemap_json_response(app, mementos, uri_r, resource):
 
     response_dict['original_uri'] = uri_r
     response_dict['timegate_uri'] = url_for(
-        'timegate', dict(uri_r=resource), force_external=True
+        'timegate', dict(uri_r=uri_r), force_external=True
     )
 
     # Browse through Mementos to generate TimeMap links dict list
@@ -431,10 +456,10 @@ def timemap_json_response(app, mementos, uri_r, resource):
     # Builds self (TimeMap)links dict
     response_dict['timemap_uri'] = {
         'json_format': url_for('timemap', dict(
-            response_type='json', uri_r=resource
+            response_type='json', uri_r=uri_r
         ), force_external=True),
         'link_format': url_for('timemap', dict(
-            response_type='link', uri_r=resource
+            response_type='link', uri_r=uri_r
         ), force_external=True),
     }
 
