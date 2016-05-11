@@ -16,9 +16,22 @@ import pytest
 
 
 @pytest.fixture()
-def client():
+def app(tmpdir):
+    """Initialize cache directory."""
+    from timegate import application
+    from timegate.cache import Cache
+    return application.TimeGate(config=dict(
+        HOST='http://localhost',
+        BASE_URI='http://www.example.com/',
+        CACHE_USE=True,
+        CACHE_FILE=tmpdir.mkdir('cache').strpath,
+    ))
+
+
+@pytest.fixture()
+def client(app):
     """Application fixture."""
     from timegate import application
     from werkzeug.test import Client
     from werkzeug.wrappers import BaseResponse
-    return Client(application.application, BaseResponse)
+    return Client(app, BaseResponse)

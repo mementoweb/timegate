@@ -14,14 +14,14 @@ import sys
 PY2 = sys.version_info[0] == 2
 
 if not PY2:  # pragma: no cover
-    from urllib.parse import urlparse, quote
+    from urllib.parse import urlparse, quote, unquote
 
     text_type = str
     string_types = (str,)
     integer_types = (int,)
 else:  # pragma: no cover
     from urlparse import urlparse
-    from urllib2 import quote
+    from urllib2 import quote, unquote
 
     text_type = unicode
     string_types = (str, unicode)
