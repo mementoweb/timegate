@@ -103,7 +103,7 @@ setup(
             'si = timegate.examples.si:SiHandler',
             'simple = timegate.examples.simple:ExampleHandler',
             'w3c = timegate.examples.w3c:W3cHandler',
-            'webcite = timegate.examples.webcite:WebciteHandler',
+            'webcite = timegate.examples.webcite:WebCiteHandler',
             'wikia = timegate.examples.wikia:WikiaHandler',
             'wikipedia = timegate.examples.wikipedia:WikipediaHandler',
         ],
