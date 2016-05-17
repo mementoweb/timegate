@@ -8,6 +8,7 @@
 
 
 .. include:: ../README.rst
+   :end-before: Installation
 
 User's Guide
 ------------
@@ -18,9 +19,16 @@ TimeGate.
 .. toctree::
    :maxdepth: 2
 
+   introduction
    installation
-   usage
-
+   big-picture
+   getting-started
+   memento
+   http-response-headers
+   handler
+   configuration
+   cache
+   advanced-features
 
 API Reference
 -------------
