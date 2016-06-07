@@ -98,7 +98,6 @@ setup(
             'nara = timegate.examples.nara:NaraHandler',
             'orain = timegate.examples.orain:OrainHandler',
             'pastpages = timegate.examples.pastpages:PastpagesHandler',
-            'po = timegate.examples.po:PoHandler',
             'sg = timegate.examples.sg:SgHandler',
             'si = timegate.examples.si:SiHandler',
             'simple = timegate.examples.simple:ExampleHandler',
