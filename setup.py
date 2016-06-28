@@ -34,7 +34,7 @@ extras_require = {
         'ConfigParser>=3.3.0r2',
     ],
     'docs': [
-        'Sphinx>=1.3',
+        'Sphinx>=1.4.2',
     ],
     'uwsgi': [
         'uWSGI>=2.0.3',
