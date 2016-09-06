@@ -106,6 +106,7 @@ class TimeGate(object):
         self.config = Config(None)
         self.config.from_object(constants)
         self.config.update(config or {})
+        self.cache = None
         if cache:
             self.cache = cache
         elif self.config['CACHE_USE']:
