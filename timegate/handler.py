@@ -21,6 +21,7 @@ from . import utils as timegate_utils
 from ._compat import quote
 from .constants import API_TIME_OUT, TM_MAX_SIZE
 from .errors import HandlerError
+from .config import Config
 
 
 class Handler(object):
@@ -43,6 +44,11 @@ class Handler(object):
         :raises HandlerError: if the requests fails to access the API.
         """
         uri = resource
+        config = Config(None)
+        user_agent = config.get("USER_AGENT")
+        headers = {}
+        if user_agent:
+            headers["User-Agent"] = user_agent
 
         # Request logging with params
         try:
@@ -55,7 +61,7 @@ class Handler(object):
             logging.info('Sending request for %s' % uri)
 
         try:
-            req = requests.get(uri, timeout=timeout, **kwargs)
+            req = requests.get(uri, timeout=timeout, headers=headers, **kwargs)
         except Exception as e:
             logging.error('Cannot request server (%s): %s' % (uri, e))
             raise HandlerError('Cannot request version server.', 502)

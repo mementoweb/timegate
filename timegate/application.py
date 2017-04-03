@@ -12,9 +12,6 @@
 
 from __future__ import absolute_import, print_function
 
-import glob
-import importlib
-import inspect
 import json
 import logging
 import os
@@ -31,10 +28,8 @@ from werkzeug.utils import cached_property, import_string
 from werkzeug.wrappers import Request, Response
 
 from . import constants
-from ._compat import quote, unquote
 from .cache import Cache
 from .config import Config
-from .errors import TimegateError, URIRequestError
 from .handler import Handler, parsed_request
 from .utils import best
 
@@ -46,6 +41,9 @@ local_manager = LocalManager([local])
 
 request = local('request')
 """Proxy to request object."""
+
+#logging.getLogger(__name__)
+#logging.basicConfig(level=logging.DEBUG)
 
 
 def url_for(*args, **kwargs):

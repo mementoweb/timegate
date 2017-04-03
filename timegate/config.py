@@ -19,8 +19,22 @@ from ._compat import string_types
 class Config(dict):
     """Implement custom loaders to populate dict."""
 
+    _instance = None
+
+    def __new__(cls, root_path, defaults=None):
+        """
+        Converting this into a singleton for cached access.
+        :param root_path: 
+        :param defaults: 
+        :return: 
+        """
+        if not cls._instance:
+            cls._instance = super(Config, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, root_path, defaults=None):
-        """Build an empty config wrapper.
+        """
+        Build an empty config wrapper.
 
         :param root_path: Path to which files are read relative from.
         :param defaults: An optional dictionary of default values.
@@ -36,6 +50,7 @@ class Config(dict):
 
         # Server configuration
         self['HOST'] = conf.get('server', 'host').rstrip('/')
+        self['USER_AGENT'] = conf.get('server', 'user_agent')
         self['STRICT_TIME'] = conf.getboolean('server', 'strict_datetime')
         if conf.has_option('server', 'api_time_out'):
             self['API_TIME_OUT'] = conf.getfloat('server', 'api_time_out')

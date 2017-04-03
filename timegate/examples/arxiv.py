@@ -28,8 +28,7 @@ class ArxivHandler(Handler):
         Handler.__init__(self)
 
         # Resources
-
-        # Ignores all that trails the identifier (? params, vX version,...)
+        # Ignores all that trails the identifier (? params, vX version,...info)
         self.rex = re.compile(
             r'(http://arxiv.org)/((?:pdf)|(?:abs))/(\d+\.\d+)(.*)')
         self.api_base = 'http://export.arxiv.org/oai2'
