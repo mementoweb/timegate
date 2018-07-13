@@ -42,8 +42,8 @@ local_manager = LocalManager([local])
 request = local('request')
 """Proxy to request object."""
 
-#logging.getLogger(__name__)
-#logging.basicConfig(level=logging.DEBUG)
+# logging.getLogger(__name__)
+# logging.basicConfig(level=logging.DEBUG)
 
 
 def url_for(*args, **kwargs):

@@ -24,9 +24,9 @@ class Config(dict):
     def __new__(cls, root_path, defaults=None):
         """
         Converting this into a singleton for cached access.
-        :param root_path: 
-        :param defaults: 
-        :return: 
+        :param root_path:
+        :param defaults:
+        :return:
         """
         if not cls._instance:
             cls._instance = super(Config, cls).__new__(cls)
