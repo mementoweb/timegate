@@ -17,9 +17,10 @@ import logging
 import os
 from datetime import datetime
 
+from pkg_resources import iter_entry_points
+
 from dateutil.tz import tzutc
 from link_header import Link, LinkHeader
-from pkg_resources import iter_entry_points
 from werkzeug.exceptions import HTTPException, abort
 from werkzeug.http import http_date, parse_date
 from werkzeug.local import Local, LocalManager
@@ -42,8 +43,8 @@ local_manager = LocalManager([local])
 request = local('request')
 """Proxy to request object."""
 
-#logging.getLogger(__name__)
-#logging.basicConfig(level=logging.DEBUG)
+# logging.getLogger(__name__)
+# logging.basicConfig(level=logging.DEBUG)
 
 
 def url_for(*args, **kwargs):

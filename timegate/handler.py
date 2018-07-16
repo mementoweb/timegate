@@ -19,9 +19,9 @@ import requests
 
 from . import utils as timegate_utils
 from ._compat import quote
+from .config import Config
 from .constants import API_TIME_OUT, TM_MAX_SIZE
 from .errors import HandlerError
-from .config import Config
 
 
 class Handler(object):
